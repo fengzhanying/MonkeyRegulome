@@ -1,6 +1,9 @@
-### task align
+### STAR Index
+../bin/Linux_x86_64_static/STAR --runThreadN 24 --runMode genomeGenerate --genomeDir ./. --genomeFastaFiles ../../../MacaqueTtoT-test/Macaque.t-to-t/Macaque_Assembly.v3-for-encode.fa --sjdbGTFfile ../../../MacaqueTtoT-test/Macaque.t-to-t/Macaque.t-to-t.sorted.final.withoutMT.gtf
 
-STAR --genomeDir {indexdir} --readFilesIn {read1_fq_gz} {read2_fq_gz} --readFilesCommand zcat --runThreadN {ncpus} --genomeLoad NoSharedMemory \
+### task align
+STAR="/lustre/home/zhangfy/software/bin/Linux_x86_64_static/STAR"
+$STAR --genomeDir {indexdir} --readFilesIn {read1_fq_gz} {read2_fq_gz} --readFilesCommand zcat --runThreadN {ncpus} --genomeLoad NoSharedMemory \
      --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 \
      --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within \
      --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM {ramGB}000000000
