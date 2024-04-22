@@ -11,7 +11,7 @@ samtools index *_align_sorted.bam
 samtools sort -n *_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted.samstat_qc
 samtools flagstat *_align_sorted.bam > *_align_sorted_stat.log
 
-### rm unmapped lowq reads
+### rm unmapped lowq reads ${mapq_thresh}=30?
 samtools view -F 1804 -f 2 -q ${mapq_thresh} -u *_align_sorted.bam | samtools sort -n /dev/stdin -o *_align_sorted_filt.bam
 samtools fixmate -r *_align_sorted_filt.bam *_align_sorted_filt_fixmate.bam
 
@@ -19,26 +19,23 @@ samtools fixmate -r *_align_sorted_filt.bam *_align_sorted_filt_fixmate.bam
 java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I *_align_sorted_filt_fixmate.bam -O *_align_sorted_filt_fixmate_markDup.bam -M *_align_sorted_markDup.log
 samtools sort *_align_sorted_filt_fixmate_markDup.bam -@ 20 -o *_align_sorted_filt_fixmate_markDup_sorted.bam
 samtools index *_align_sorted_filt_fixmate_markDup_sorted.bam
-samtools sort -n *_align_sorted_filt_fixmate_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted_filt_fixmate_markDup.sorted_samstat_qc
+samtools sort -n *_align_sorted_filt_fixmate_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted_filt_fixmate_markDup_sorted.samstat_qc
 samtools flagstat *_align_sorted_filt_fixmate_markDup_sorted.bam > *_align_sorted_filt_fixmate_markDup_sorted_stat.log
 
 ##rm duplicates
 java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I *_align_sorted_filt_fixmate.bam -O *_align_sorted_filt_fixmate_rmDup.bam --REMOVE_DUPLICATES true -M *_align_sorted_rmDup.log
-echo "samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam $path3/trim_data/align/${file1}_align_sorted_rmDup.bam" >> $path1/${file1}.pbs 
-echo "samtools index $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam" >> $path1/${file1}.pbs
-echo "samtools flagstat $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam > $path3/trim_data/align/${file1}_align_sorted_rmDup_stat.log" >> $path1/${file1}.pbs
-##rm low quality reads and reads that are not properly paired.(https://training.galaxyproject.org/training-material/topics/epigenetics/tutorials/atac-seq/tutorial.html#filtering-mapped-reads)(FLAGs  https://broadinstitute.github.io/picard/explain-flags.html)
-echo "samtools view -h -q 30 -f 2 -b $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam > $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.bam" >> $path1/${file1}.pbs
-echo "samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.sort.bam $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.bam" >> $path1/${file1}.pbs
-echo "samtools index $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.sort.bam" >> $path1/${file1}.pbs
-echo "samtools flagstat $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.sort.bam > $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow_stat.log" >> $path1/${file1}.pbs
+samtools sort *_align_sorted_filt_fixmate_rmDup.bam -@ 20 -o *_align_sorted_filt_fixmate_rmDup_sorted.bam
+samtools index *_align_sorted_filt_fixmate_rmDup_sorted.bam
+samtools sort -n *_align_sorted_filt_fixmate_rmDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted_filt_fixmate_rmDup_sorted.samstat_qc
+samtools flagstat *_align_sorted_filt_fixmate_rmDup_sorted.bam > *_align_sorted_filt_fixmate_rmDup_sorted_stat.log
+
 ##shift +4/-5 移动
-echo "alignmentSieve --numberOfProcessors 20 --ATACshift -b $path3/trim_data/align/${file1}_align_sorted_rmDup_rmLow.sort.bam -o $path3/trim_data/align/${file1}_final.bam" >> $path1/${file1}.pbs
-echo "samtools sort -@ 20 -o $path3/trim_data/align/${file1}_final_sort.bam $path3/trim_data/align/${file1}_final.bam" >> $path1/${file1}.pbs
-echo "samtools index $path3/trim_data/align/${file1}_final_sort.bam" >> $path1/${file1}.pbs
-echo "samtools flagstat $path3/trim_data/align/${file1}_final_sort.bam > $path3/trim_data/align/${file1}_final_stat.log " >> $path1/${file1}.pbs
-##bam to bed
-echo "bamToBed -i $path3/trim_data/align/${file1}_final_sort.bam > $path3/trim_data/align/${file1}_final.bed" >> $path1/${file1}.pbs
+alignmentSieve --numberOfProcessors 20 --ATACshift -b *_align_sorted_filt_fixmate_rmDup_sorted.bam -o *_align_sorted_filt_fixmate_rmDup_sorted_final.bam
+samtools sort *_align_sorted_filt_fixmate_rmDup_sorted_final.bam -@ 20 -o *_final.bam
+amtools index *_final.bam
+samtools sort -n *_final.bam -O sam | SAMstats --sorted_sam_file - --outf *_final.samstat_qc
+samtools flagstat *_final.bam > *_final.log
+
 ###call peak
 echo "mkdir $path3/trim_data/peaks" >> $path1/${file1}.pbs
 echo "macs2 callpeak -t $path3/trim_data/align/${file1}_final.bed -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ${file1} --outdir $path3/trim_data/peaks/ " >> $path1/${file1}.pbs
