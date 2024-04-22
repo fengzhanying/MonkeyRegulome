@@ -8,7 +8,7 @@
 
 ### task bam_to_signals
 
-STAR --runMode inputAlignmentsFromBAM --inputBAMfile {input_bam} --outWigType bedGraph --outWigStrand {strandedness} --outWigReferencesPrefix chr
+../STAR-2.7.11b/bin/Linux_x86_64_static/STAR --runMode inputAlignmentsFromBAM --inputBAMfile Aligned.sortedByCoord.out.bam --outWigType bedGraph --outWigReferencesPrefix chr
 
 bedSort Signal.UniqueMultiple.str1.out.bg Signal.UniqueMultiple.str1.out.bg
 bedGraphToBigWig Signal.UniqueMultiple.str1.out.bg {chrom_sizes} *_minusAll.bw
