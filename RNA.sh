@@ -20,13 +20,9 @@
 ./bedGraphToBigWig Signal.Unique.str2.out.sorted.bg Macaca.chrom.sizes Brain_P0_plusUniq.bw
 
 ### task rsem_quant
+./rsem-prepare-reference --gtf ../../MacaqueTtoT-test/Macaque.t-to-t/Macaque.t-to-t.sorted.final.withoutMT.gtf ../../MacaqueTtoT-test/Macaque.t-to-t/Macaque_Assembly.v3-for-encode.fa ./Macaca/
 
-rsem-calculate-expression --bam --estimate-rspd --calc-ci --seed {rnd_seed} -p {ncpus} --no-bam-output --ci-memory {ramGB}000 --forward-prob {fwd_prob} --paired-end {anno_bam} rsem_index/rsem {bam_root}_rsem
+../RSEM/rsem-calculate-expression --bam --estimate-rspd --calc-ci --seed 666 -p 24 --no-bam-output --ci-memory 100000 --paired-end Aligned.toTranscriptome.out.bam ../RSEM/Macaca/ Brain_P0_RSEM
 
 
-### task mad_qc
-
-Rscript {path_to_madR} {quants_1} {quants_2}
-
-### task rna_qc
-
+### MAD QC for replicates: Rscript {path_to_madR} {quants_1} {quants_2}
