@@ -1,4 +1,4 @@
-# MonkeyENCODE
+# Monkey ENCODE
 This repository deposit the codes for processing data of Monkey ENCODE
 
 For RNA-seq data, run as follows:
