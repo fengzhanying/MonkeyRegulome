@@ -8,33 +8,33 @@ bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_P0_Rep1_R1
 samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
 samtools index Brain_P0_Rep1_align_sorted.bam
 ### Need non-mito BAM？
-samtools sort -n *_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted.samstat_qc
-samtools flagstat *_align_sorted.bam > *_align_sorted_stat.log
+samtools sort -n Brain_P0_Rep1_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
 
 ### rm unmapped lowq reads ${mapq_thresh}=30?
-samtools view -F 1804 -f 2 -q ${mapq_thresh} -u *_align_sorted.bam | samtools sort -n /dev/stdin -o *_align_sorted_filt.bam
-samtools fixmate -r *_align_sorted_filt.bam *_align_sorted_filt_fixmate.bam
+samtools view -F 1804 -f 2 -q ${mapq_thresh} -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
+samtools fixmate -r Brain_P0_Rep1_align_sorted_filt.bam Brain_P0_Rep1_align_sorted_filt_fixmate.bam
 
 ##mark dup
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I *_align_sorted_filt_fixmate.bam -O *_align_sorted_filt_fixmate_markDup.bam -M *_align_sorted_markDup.log
-samtools sort *_align_sorted_filt_fixmate_markDup.bam -@ 20 -o *_align_sorted_filt_fixmate_markDup_sorted.bam
-samtools index *_align_sorted_filt_fixmate_markDup_sorted.bam
-samtools sort -n *_align_sorted_filt_fixmate_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted_filt_fixmate_markDup_sorted.samstat_qc
-samtools flagstat *_align_sorted_filt_fixmate_markDup_sorted.bam > *_align_sorted_filt_fixmate_markDup_sorted_stat.log
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_markDup.bam -M Brain_P0_Rep1_align_sorted_markDup.log
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_markDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted.bam
+samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_markDup_sorted_stat.log
 
 ##rm duplicates
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I *_align_sorted_filt_fixmate.bam -O *_align_sorted_filt_fixmate_rmDup.bam --REMOVE_DUPLICATES true -M *_align_sorted_rmDup.log
-samtools sort *_align_sorted_filt_fixmate_rmDup.bam -@ 20 -o *_align_sorted_filt_fixmate_rmDup_sorted.bam
-samtools index *_align_sorted_filt_fixmate_rmDup_sorted.bam
-samtools sort -n *_align_sorted_filt_fixmate_rmDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted_filt_fixmate_rmDup_sorted.samstat_qc
-samtools flagstat *_align_sorted_filt_fixmate_rmDup_sorted.bam > *_align_sorted_filt_fixmate_rmDup_sorted_stat.log
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_sorted_rmDup.log
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.bam
+samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted_stat.log
 
 ##shift +4/-5 移动
-alignmentSieve --numberOfProcessors 20 --ATACshift -b *_align_sorted_filt_fixmate_rmDup_sorted.bam -o *_align_sorted_filt_fixmate_rmDup_sorted_final.bam
-samtools sort *_align_sorted_filt_fixmate_rmDup_sorted_final.bam -@ 20 -o *_final.bam
-amtools index *_final.bam
-samtools sort -n *_final.bam -O sam | SAMstats --sorted_sam_file - --outf *_final.samstat_qc
-samtools flagstat *_final.bam > *_final.log
+alignmentSieve --numberOfProcessors 20 --ATACshift -b Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted.bam -o Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted_final.bam
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_rmDup_sorted_final.bam -@ 20 -o Brain_P0_Rep1_final.bam
+amtools index *Brain_P0_Rep1_final.bam
+samtools sort -n Brain_P0_Rep1_final.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_final.samstat_qc
+samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 
 ###call peak
 echo "mkdir $path3/trim_data/peaks" >> $path1/${file1}.pbs
