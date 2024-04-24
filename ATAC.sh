@@ -12,7 +12,7 @@ samtools sort -n Brain_P0_Rep1_align_sorted.bam -O sam | SAMstats --sorted_sam_f
 samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
 
 ### rm unmapped lowq reads ${mapq_thresh}=30?
-samtools view -F 1804 -f 2 -q ${mapq_thresh} -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
+samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
 samtools fixmate -r Brain_P0_Rep1_align_sorted_filt.bam Brain_P0_Rep1_align_sorted_filt_fixmate.bam
 
 ##mark dup
