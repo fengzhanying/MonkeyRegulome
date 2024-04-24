@@ -5,8 +5,8 @@ fastqc -t 20 *_*.fq.gz -o ./QC_result
 
 ### Bowtie2
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_P0_Rep1_R2.trimmed.fq.gz -S Brain_P0_Rep1_align.sam --met-file Brain_P0_Rep1_align_result.log &> Brain_P0_Rep1_align.log
-samtools sort *_align.sam -@ 20 -o *_align_sorted.bam
-samtools index *_align_sorted.bam
+samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted.bam
 ### Need non-mito BAM？
 samtools sort -n *_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf *_align_sorted.samstat_qc
 samtools flagstat *_align_sorted.bam > *_align_sorted_stat.log
