@@ -40,7 +40,7 @@ samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 ###call peak
 LC_COLLATE=C bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
 zcat -f Brain_P0_Rep1_final.bedpe.gz | awk \'BEGIN{OFS="\\t"}{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}\' | gzip -nc > Brain_P0_Rep1_final.tagAlign.gz
-macs2 callpeak -t Brain_P0_Rep1_final.bam -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1
+macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1
 
 ##Fragment distribution
 echo "conda activate R3.6" >> $path1/${file1}.pbs
