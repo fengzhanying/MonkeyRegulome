@@ -38,16 +38,16 @@ samtools sort -n Brain_P0_Rep1_final.bam -O sam | SAMstats --sorted_sam_file - -
 samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 
 ###call peak
-echo "mkdir $path3/trim_data/peaks" >> $path1/${file1}.pbs
-echo "macs2 callpeak -t $path3/trim_data/align/${file1}_final.bed -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ${file1} --outdir $path3/trim_data/peaks/ " >> $path1/${file1}.pbs
-##stat peak number
-echo "echo  \"${file1}\" >  $path3/trim_data/peaks/samples_peak_number_${file1}.log" >> $path1/${file1}.pbs
-echo "wc -l $path3/trim_data/peaks/${file1}_peaks.narrowPeak >> $path3/trim_data/peaks/samples_peak_number_${file1}.log" >> $path1/${file1}.pbs
+LC_COLLATE=C bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
+zcat -f Brain_P0_Rep1_final.bedpe.gz | awk \'BEGIN{OFS="\\t"}{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}\' | gzip -nc > Brain_P0_Rep1_final.tagAlign.gz
+macs2 callpeak -t Brain_P0_Rep1_final.bam -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1
+
 ##Fragment distribution
 echo "conda activate R3.6" >> $path1/${file1}.pbs
 echo "java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt" >> $path1/${file1}.pbs
 echo "conda deactivate" >> $path1/${file1}.pbs
 ##bam to bw
+
 echo "bamCoverage  --normalizeUsing RPKM --extendReads --binSize 500 -p 4 --bam $path3/trim_data/align/${file1}_final_sort.bam -o $path3/trim_data/align/${file1}_final.bw" >> $path1/${file1}.pbs
 ##TSS
 echo "computeMatrix reference-point --referencePoint TSS -R /lustre/home/zhangfy/data0428/reference/Mmul10_ensembl_TSS.bed -S $path3/trim_data/align/${file1}_final.bw -p 20 -b 3000 -a 3000 --skipZeros -o $path3/trim_data/align/${file1}_final_TSS.gz --outFileSortedRegions $path3/trim_data/align/${file1}_final_TSS.bed --outFileNameMatrix $path3/trim_data/align/${file1}_final_TSS.matirx.txt" >> $path1/${file1}.pbs
