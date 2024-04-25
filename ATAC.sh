@@ -40,12 +40,13 @@ samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 ###call peak
 LC_COLLATE=C bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
 zcat -f Brain_P0_Rep1_final.bedpe.gz | awk \'BEGIN{OFS="\\t"}{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}\' | gzip -nc > Brain_P0_Rep1_final.tagAlign.gz
-macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1
-
+macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1 --SPMR
+        
 ##Fragment distribution
 echo "conda activate R3.6" >> $path1/${file1}.pbs
 echo "java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt" >> $path1/${file1}.pbs
 echo "conda deactivate" >> $path1/${file1}.pbs
+
 ##bam to bw
 
 echo "bamCoverage  --normalizeUsing RPKM --extendReads --binSize 500 -p 4 --bam $path3/trim_data/align/${file1}_final_sort.bam -o $path3/trim_data/align/${file1}_final.bw" >> $path1/${file1}.pbs
