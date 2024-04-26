@@ -38,26 +38,28 @@ samtools sort -n Brain_P0_Rep1_final.bam -O sam | SAMstats --sorted_sam_file - -
 samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 
 ###call peak
+macs2 callpeak -t Brain_P0_Rep1_final.bam -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1_Bam --SPMR
+
 bedtools bamtobed -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
 zcat -f Brain_P0_Rep1_final.bedpe.gz | awk \'BEGIN{OFS="\\t"}{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}\' | gzip -nc > Brain_P0_Rep1_final.tagAlign.gz
-macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1 --SPMR
-        
+macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1_TA --SPMR
+macs2 bdgcmp -t Brain_P0_Rep1_TA_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m FE
+bedtools slop -i Brain_P0_Rep1_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.fc.signal.bedgraph
+sort -k1,1 -k2,2n Brain_P0_Rep1.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > Brain_P0_Rep1.fc.signal.srt.bedgraph
+bedGraphToBigWig Brain_P0_Rep1.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.fc.signal.bigwig
+
+sval=`zcat Brain_P0_Rep1_final.tagAlign.gz | wc -l`
+sval=`expr $sval / 1000000`
+macs2 bdgcmp -t Brain_P0_Rep1_TA_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m ppois -S ${sval}
+bedtools slop -i Brain_P0_Rep1_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bedgraph
+sort -k1,1 -k2,2n Brain_P0_Rep1.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > Brain_P0_Rep1.pval.signal.srt.bedgraph
+bedGraphToBigWig Brain_P0_Rep1.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bigwig
+
 ##Fragment distribution
 echo "conda activate R3.6" >> $path1/${file1}.pbs
 echo "java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt" >> $path1/${file1}.pbs
 echo "conda deactivate" >> $path1/${file1}.pbs
 
-##bam to bw
-
-echo "bamCoverage  --normalizeUsing RPKM --extendReads --binSize 500 -p 4 --bam $path3/trim_data/align/${file1}_final_sort.bam -o $path3/trim_data/align/${file1}_final.bw" >> $path1/${file1}.pbs
-##TSS
-echo "computeMatrix reference-point --referencePoint TSS -R /lustre/home/zhangfy/data0428/reference/Mmul10_ensembl_TSS.bed -S $path3/trim_data/align/${file1}_final.bw -p 20 -b 3000 -a 3000 --skipZeros -o $path3/trim_data/align/${file1}_final_TSS.gz --outFileSortedRegions $path3/trim_data/align/${file1}_final_TSS.bed --outFileNameMatrix $path3/trim_data/align/${file1}_final_TSS.matirx.txt" >> $path1/${file1}.pbs
-echo "plotHeatmap -m $path3/trim_data/align/${file1}_final_TSS.gz -out $path3/trim_data/align/${file1}_final_TSS_heatmap.pdf" >> $path1/${file1}.pbs
-##peak center
-echo "computeMatrix reference-point --referencePoint center -R $path3/trim_data/peaks/${file1}_summits.bed -S $path3/trim_data/align/${file1}_final.bw -p 20 -b 3000 -a 3000 --skipZeros -o $path3/trim_data/align/${file1}_final_center.gz --outFileSortedRegions $path3/trim_data/align/${file1}_final_center.bed --outFileNameMatrix $path3/trim_data/align/${file1}_final_center.matrix.txt" >> $path1/${file1}.pbs
-echo "plotHeatmap -m $path3/trim_data/align/${file1}_final_center.gz -out $path3/trim_data/align/${file1}_final_center_heatmap.pdf" >> $path1/${file1}.pbs
-##Fingerprint
-echo "plotFingerprint -b $path3/trim_data/align/${file1}_final_sort.bam --numberOfProcessors 20 --labels ${file1} --minMappingQuality 30 --skipZeros --numberOfSamples 500000 -T "Fingerprint" --plotFile $path3/trim_data/align/${file1}_fingerprints.png --outRawCounts $path3/trim_data/align/${file1}.fingerprints.tab" >> $path1/${file1}.pbs
 ##FRiP
 echo "echo \"$file1\" \"total reads\"  > $path3/trim_data/peaks/FRiP_calculation_${file1}.txt" >> $path1/${file1}.pbs
 echo "T=\$(cat $path3/trim_data/align/${file1}_final.bed|wc -l)" >> $path1/${file1}.pbs
