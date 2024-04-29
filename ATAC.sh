@@ -1,5 +1,5 @@
 ### Task Trim Adapter
-fastp -i ../../mm10/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R1.fq.gz -I ../../mm10/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R2.fq.gz -o Brain_P0_Rep1_R1.trimmed.fq.gz -O Brain_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_P0_Rep1_fastp.json --html Brain_P0_Rep1_fastp.html 2 > Brain_P0_Rep1_fastp.log
+fastp -i ../../mm10/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R1.fq.gz -I ../../mm10/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R2.fq.gz -o Brain_P0_Rep1_R1.trimmed.fq.gz -O Brain_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_P0_Rep1_fastp.json --html Brain_P0_Rep1_fastp.html 2> Brain_P0_Rep1_fastp.log
 
 fastqc -t 20 *_*.fq.gz -o ./QC_result
 
