@@ -1,12 +1,12 @@
 #!/bin/bash
 
 ##QC_raw_data
-mkdir $path3/QC_result" >> $path1/${file1}.pbs
-fastqc -t 20 $PWD/$file1/${file1}_* -o $path1/QC_result " >> $path1/${file1}.pbs
+mkdir QC_result
+fastqc -t 20 ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/*.gz -o ./QC_result/
+
 ##trimming fastp
-fastp -i $PWD/$file1/${file1}_1.fq.gz -I $PWD/$file1/${file1}_2.fq.gz -o $path3/trim_data/${file1}_1.trimmed.fq.gz -O $path3/trim_data/${file1}_2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json $path3/trim_data/${file1}_fastp.json --html $path3/trim_data/${file1}_fastp.html 2>$path3/trim_data/${file1}_fastp.log " >> $path1/${file1}.pbs 
-##QC_clean_data
-fastqc -t 20 $path3/trim_data/${file1}_*.fq.gz -o $path3/QC_result" >> $path1/${file1}.pbs
+fastp -i ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1_1.fq.gz -I ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1_2.fq.gz -o Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz -O Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_H3K27ac_P0_Rep1_fastp.json --html Brain_H3K27ac_P0_Rep1_fastp.html 2 > Brain_H3K27ac_P0_Rep1_fastp.log
+fastqc -t 20 Brain_H3K27ac_P0_Rep1_*.fq.gz -o QC_result
 ##alignment
 mkdir $path3/trim_data/align" >> $path1/${file1}.pbs
 bowtie2 -p 30 -I 10 -X 700 --phred33 --local --very-sensitive-local --no-unal --no-mixed --no-discordant -x /lustre/home/zhangfy/data0428/reference/Macaca_index  -1 $path3/trim_data/${file1}_1.trimmed.fq.gz  -2 $path3/trim_data/${file1}_2.trimmed.fq.gz -S $path3/trim_data/align/${file1}_align.sam --met-file $path3/trim_data/align/${file1}_align_result.log &> $path3/trim_data/align/${file1}_align.log" >> $path1/${file1}.pbs
