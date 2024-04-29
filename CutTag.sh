@@ -8,7 +8,8 @@ fastqc -t 20 ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/*
 fastp -i ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1_1.fq.gz -I ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1_2.fq.gz -o Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz -O Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_H3K27ac_P0_Rep1_fastp.json --html Brain_H3K27ac_P0_Rep1_fastp.html 2 > Brain_H3K27ac_P0_Rep1_fastp.log
 fastqc -t 20 Brain_H3K27ac_P0_Rep1_*.fq.gz -o QC_result
 ##alignment
-mkdir $path3/trim_data/align" >> $path1/${file1}.pbs
+bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz -S Brain_H3K27ac_P0_Rep1_align.sam --met-file Brain_H3K27ac_P0_Rep1_align_result.log &> Brain_H3K27ac_P0_Rep1_align.log
+
 bowtie2 -p 30 -I 10 -X 700 --phred33 --local --very-sensitive-local --no-unal --no-mixed --no-discordant -x /lustre/home/zhangfy/data0428/reference/Macaca_index  -1 $path3/trim_data/${file1}_1.trimmed.fq.gz  -2 $path3/trim_data/${file1}_2.trimmed.fq.gz -S $path3/trim_data/align/${file1}_align.sam --met-file $path3/trim_data/align/${file1}_align_result.log &> $path3/trim_data/align/${file1}_align.log" >> $path1/${file1}.pbs
 samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted.bam $path3/trim_data/align/${file1}_align.sam" >> $path1/${file1}.pbs
 samtools index $path3/trim_data/align/${file1}_align_sorted.bam" >> $path1/${file1}.pbs
