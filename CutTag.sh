@@ -10,25 +10,31 @@ fastqc -t 20 Brain_H3K27ac_P0_Rep1_*.fq.gz -o QC_result
 ##alignment
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz -S Brain_H3K27ac_P0_Rep1_align.sam --met-file Brain_H3K27ac_P0_Rep1_align_result.log &> Brain_H3K27ac_P0_Rep1_align.log
 
-bowtie2 -p 30 -I 10 -X 700 --phred33 --local --very-sensitive-local --no-unal --no-mixed --no-discordant -x /lustre/home/zhangfy/data0428/reference/Macaca_index  -1 $path3/trim_data/${file1}_1.trimmed.fq.gz  -2 $path3/trim_data/${file1}_2.trimmed.fq.gz -S $path3/trim_data/align/${file1}_align.sam --met-file $path3/trim_data/align/${file1}_align_result.log &> $path3/trim_data/align/${file1}_align.log" >> $path1/${file1}.pbs
-samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted.bam $path3/trim_data/align/${file1}_align.sam" >> $path1/${file1}.pbs
-samtools index $path3/trim_data/align/${file1}_align_sorted.bam" >> $path1/${file1}.pbs
-samtools flagstat $path3/trim_data/align/${file1}_align_sorted.bam > $path3/trim_data/align/${file1}_align_sorted_stat.log" >> $path1/${file1}.pbs
-##mark_dup
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I $path3/trim_data/align/${file1}_align_sorted.bam -O $path3/trim_data/align/${file1}_align_sorted_markDup.bam -M $path3/trim_data/align/${file1}_align_sorted_markDup.log" >> $path1/${file1}.pbs
-samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted_markDup.sort.bam $path3/trim_data/align/${file1}_align_sorted_markDup.bam" >> $path1/${file1}.pbs
-samtools index $path3/trim_data/align/${file1}_align_sorted_markDup.sort.bam" >> $path1/${file1}.pbs
-samtools flagstat $path3/trim_data/align/${file1}_align_sorted_markDup.sort.bam > $path3/trim_data/align/${file1}_align_sorted_markDup_stat.log" >> $path1/${file1}.pbs
+samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted.bam
+### Need non-mito BAM？
+samtools sort -n Brain_P0_Rep1_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
+
+### rm unmapped lowq reads ${mapq_thresh}=30?
+samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
+samtools fixmate -r Brain_P0_Rep1_align_sorted_filt.bam Brain_P0_Rep1_align_sorted_filt_fixmate.bam
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam
+
+##mark dup
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -M Brain_P0_Rep1_align_sorted_markDup.log
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
+samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted_stat.log
+
 ##rm duplicates
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I $path3/trim_data/align/${file1}_align_sorted.bam -O $path3/trim_data/align/${file1}_align_sorted_rmDup.bam --REMOVE_DUPLICATES true -M $path3/trim_data/align/${file1}_align_sorted_rmDup.log" >> $path1/${file1}.pbs
-samtools sort -@ 20 -o $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam $path3/trim_data/align/${file1}_align_sorted_rmDup.bam" >> $path1/${file1}.pbs
-samtools index $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam" >> $path1/${file1}.pbs
-samtools flagstat $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam > $path3/trim_data/align/${file1}_align_sorted_rmDup_stat.log" >> $path1/${file1}.pbs
-##rm low quality reads and the reads that not map to the same chromosome
-samtools view -h -q 30 -f 2 -b $path3/trim_data/align/${file1}_align_sorted_rmDup.sort.bam > $path3/trim_data/align/${file1}_final.bam" >> $path1/${file1}.pbs
-samtools sort -@ 20 -o $path3/trim_data/align/${file1}_final.sort.bam $path3/trim_data/align/${file1}_final.bam" >> $path1/${file1}.pbs
-samtools index $path3/trim_data/align/${file1}_final.sort.bam" >> $path1/${file1}.pbs
-samtools flagstat $path3/trim_data/align/${file1}_final.sort.bam > $path3/trim_data/align/${file1}_final_stat.log" >> $path1/${file1}.pbs
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_sorted_rmDup.log
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.samstat_qc
+samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_stat.log
+
 
 
 ##marker
