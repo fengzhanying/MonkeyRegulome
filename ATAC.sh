@@ -1,44 +1,52 @@
+## QC raw
 mkdir ./QC_result
 fastqc -t 20 ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/*.fq.gz -o ./QC_result
 
-### Task Trim Adapter
+## Trim Adapter
 fastp -i ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R1.fq.gz -I ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R2.fq.gz -o Brain_P0_Rep1_R1.trimmed.fq.gz -O Brain_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_P0_Rep1_fastp.json --html Brain_P0_Rep1_fastp.html 2> Brain_P0_Rep1_fastp.log
 
+## QC trim
 fastqc -t 20 *_*.fq.gz -o ./QC_result
 
-### Bowtie2
+## Bowtie2
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_P0_Rep1_R2.trimmed.fq.gz -S Brain_P0_Rep1_align.sam --met-file Brain_P0_Rep1_align_result.log &> Brain_P0_Rep1_align.log
 samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
 samtools index Brain_P0_Rep1_align_sorted.bam
-### Need non-mito BAM？
-samtools sort -n Brain_P0_Rep1_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted.samstat_qc
 samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
 
+## rm mito
+samtools view -b -L ../bin/Macaca.chrom_nomito.bed Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_nomito.bam
+samtools sort Brain_P0_Rep1_align_nomito.bam -@ 20 -o Brain_P0_Rep1_align_nomito_sorted.bam
+samtools index Brain_P0_Rep1_align_nomito_sorted.bam
+samtools flagstat Brain_P0_Rep1_align_nomito_sorted.bam > Brain_P0_Rep1_align_nomito_sorted_stat.log
+
+
 ### rm unmapped lowq reads ${mapq_thresh}=30?
-samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
-samtools fixmate -r Brain_P0_Rep1_align_sorted_filt.bam Brain_P0_Rep1_align_sorted_filt_fixmate.bam
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam
+samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_nomito_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_nomito_filt.bam
+samtools fixmate -r Brain_P0_Rep1_align_nomito_filt.bam Brain_P0_Rep1_align_nomito_filt_fixmate.bam
+samtools sort Brain_P0_Rep1_align_nomito_filt_fixmate.bam -@ 20 -o Brain_P0_Rep1_align_nomito_filt_fixmate_sorted.bam
+samtools index Brain_P0_Rep1_align_nomito_filt_fixmate_sorted.bam
+samtools flagstat Brain_P0_Rep1_align_nomito_filt_fixmate_sorted.bam > Brain_P0_Rep1_align_nomito_filt_fixmate_sorted_stat.log
 
-##mark dup
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -M Brain_P0_Rep1_align_sorted_markDup.log
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
-samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
-samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.samstat_qc
-samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted_stat.log
+## mark dup
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_nomito_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_nomito_filt_fixmate_markDup.bam -M Brain_P0_Rep1_align_nomito_filt_fixmate_markDup.log
+samtools sort Brain_P0_Rep1_align_nomito_filt_fixmate_markDup.bam -@ 20 -o Brain_P0_Rep1_align_nomito_filt_fixmate_markDup_sorted.bam
+samtools index Brain_P0_Rep1_align_nomito_filt_fixmate_markDup_sorted.bam
+samtools flagstat Brain_P0_Rep1_align_nomito_filt_fixmate_markDup_sorted.bam > Brain_P0_Rep1_align_nomito_filt_fixmate_markDup_sorted_stat.log
 
-##rm duplicates
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_sorted_rmDup.log
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.log
+## rm duplicates
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_nomito_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup.log
+samtools sort Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_sorted.bam
+samtools index Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_sorted.bam
+samtools flagstat Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_sorted.bam > Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_sorted_stat.log
 
-##shift +4/-5 移动
-alignmentSieve --numberOfProcessors 20 --ATACshift -b Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_shifted.bam
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_shifted.bam -@ 20 -o Brain_P0_Rep1_final.bam
+## shift +4/-5
+alignmentSieve --numberOfProcessors 20 --ATACshift -b Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_sorted.bam -o Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_shifted.bam
+samtools sort Brain_P0_Rep1_align_nomito_filt_fixmate_rmDup_shifted.bam -@ 20 -o Brain_P0_Rep1_final.bam
 samtools index Brain_P0_Rep1_final.bam
 samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 
-###call peak
+### call peak
 samtools sort Brain_P0_Rep1_final.bam -n -@ 24 -o Brain_P0_Rep1.bam
 bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1.bam | gzip -nc > Brain_P0_Rep1.bedpe.gz
 zcat -f Brain_P0_Rep1.bedpe.gz | awk 'BEGIN{OFS="\t"}{printf "%s\t%s\t%s\tN\t1000\t%s\n%s\t%s\t%s\tN\t1000\t%s\n",$1,$2,$3,$9,$4,$5,$6,$10}' | gzip -nc > Brain_P0_Rep1.tagAlign.gz
