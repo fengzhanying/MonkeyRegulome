@@ -28,25 +28,32 @@ samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.
 
 ##rm duplicates
 java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_sorted_rmDup.log
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_P0_Rep1_final.bam
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.log
+
+##shift +4/-5 移动
+alignmentSieve --numberOfProcessors 20 --ATACshift -b Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_shifted.bam
+samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_shifted.bam -@ 20 -o Brain_P0_Rep1_final.bam
 samtools index Brain_P0_Rep1_final.bam
-samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final_stat.log
+samtools flagstat Brain_P0_Rep1_final.bam > Brain_P0_Rep1_final.log
 
 ###call peak
-macs2 callpeak -t Brain_P0_Rep1_final.bam -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1_Bam --SPMR
+samtools sort Brain_P0_Rep1_final.bam -n -@ 24 -o Brain_P0_Rep1.bam
+bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1.bam | gzip -nc > Brain_P0_Rep1.bedpe.gz
+zcat -f Brain_P0_Rep1.bedpe.gz | awk 'BEGIN{OFS="\t"}{printf "%s\t%s\t%s\tN\t1000\t%s\n%s\t%s\t%s\tN\t1000\t%s\n",$1,$2,$3,$9,$4,$5,$6,$10}' | gzip -nc > Brain_P0_Rep1.tagAlign.gz
+macs2 callpeak -t Brain_P0_Rep1.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1 --SPMR
 
-bedtools bamtobed -bedpe -mate1 -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
-bedtools bamtobed -i Brain_P0_Rep1_final.bam | gzip -nc > Brain_P0_Rep1_final.bedpe.gz
-zcat -f Brain_P0_Rep1_final.bedpe.gz | awk \'BEGIN{OFS="\\t"}{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}\' | gzip -nc > Brain_P0_Rep1_final.tagAlign.gz
-macs2 callpeak -t Brain_P0_Rep1_final.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n Brain_P0_Rep1_TA --SPMR
-macs2 bdgcmp -t Brain_P0_Rep1_TA_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m FE
+### create fc bw file
+macs2 bdgcmp -t Brain_P0_Rep1_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m FE
 bedtools slop -i Brain_P0_Rep1_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.fc.signal.bedgraph
 sort -k1,1 -k2,2n Brain_P0_Rep1.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > Brain_P0_Rep1.fc.signal.srt.bedgraph
 bedGraphToBigWig Brain_P0_Rep1.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.fc.signal.bigwig
 
-sval=`zcat Brain_P0_Rep1_final.tagAlign.gz | wc -l`
+### create pvalue bw file
+sval=`zcat Brain_P0_Rep1.tagAlign.gz | wc -l`
 sval=`expr $sval / 1000000`
-macs2 bdgcmp -t Brain_P0_Rep1_TA_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m ppois -S ${sval}
+macs2 bdgcmp -t Brain_P0_Rep1_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m ppois -S ${sval}
 bedtools slop -i Brain_P0_Rep1_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bedgraph
 sort -k1,1 -k2,2n Brain_P0_Rep1.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > Brain_P0_Rep1.pval.signal.srt.bedgraph
 bedGraphToBigWig Brain_P0_Rep1.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bigwig
@@ -68,6 +75,4 @@ echo "echo \$P >> $path3/trim_data/peaks/FRiP_calculation_${file1}.txt" >> $path
 echo "echo \"$file1\" \"FRiP\" >> $path3/trim_data/peaks/FRiP_calculation_${file1}.txt" >> $path1/${file1}.pbs
 echo "FRiP=\$(awk \"BEGIN {print \"\$P\"/\"\$T\"}\" )" >> $path1/${file1}.pbs
 echo "echo \$FRiP >> $path3/trim_data/peaks/FRiP_calculation_${file1}.txt 2>$path1/log_out" >> $path1/${file1}.pbs
-echo "rm $path3/trim_data/align/${file1}_align.sam" >> $path1/${file1}.pbs
-qsub $path1/${file1}.pbs
-done
+
