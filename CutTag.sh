@@ -28,9 +28,9 @@ samtools flagstat Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup
 
 ##rm duplicates
 java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_H3K27ac_P0_Rep1_align_sorted_rmDup.log
-samtools sort Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools index Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools flagstat Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_stat.log
+samtools sort Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_H3K27ac_P0_Rep1_final.bam
+samtools index Brain_H3K27ac_P0_Rep1_final.bam
+samtools flagstat Brain_H3K27ac_P0_Rep1_final.bam > Brain_H3K27ac_P0_Rep1_final.log
 
 
 
