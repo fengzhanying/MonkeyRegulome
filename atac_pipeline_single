@@ -1,12 +1,16 @@
+fq1=$1
+fq2=$2
+sample=$3
+
 ## QC raw
 mkdir ./QC_result
-fastqc -t 20 ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/*.fq.gz -o ./QC_result
+fastqc -t 20 ${fq1} ${fq2} -o ./QC_result
 
 ## Trim Adapter
-fastp -i ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R1.fq.gz -I ../../MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R2.fq.gz -o Brain_P0_Rep1_R1.trimmed.fq.gz -O Brain_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_P0_Rep1_fastp.json --html Brain_P0_Rep1_fastp.html 2> Brain_P0_Rep1_fastp.log
+fastp -i ${fq1} -I ${fq2} -o ${sample}_R1.trimmed.fq.gz -O ${sample}_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 24 --json ${sample}_fastp.json --html ${sample}_fastp.html 2> ${sample}_fastp.log
 
 ## QC trim
-fastqc -t 20 *_*.fq.gz -o ./QC_result
+fastqc -t 20 *.trimmed.fq.gz -o ./QC_result
 
 ## Bowtie2
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_P0_Rep1_R2.trimmed.fq.gz -S Brain_P0_Rep1_align.sam --met-file Brain_P0_Rep1_align_result.log &> Brain_P0_Rep1_align.log
