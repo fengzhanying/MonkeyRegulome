@@ -10,7 +10,7 @@ fastqc -t 20 *_*.fq.gz -o ./QC_result
 
 ## Bowtie2
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_P0_Rep1_R2.trimmed.fq.gz -S Brain_P0_Rep1_align.sam --met-file Brain_P0_Rep1_align_result.log &> Brain_P0_Rep1_align.log
-samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
+samtools sort Brain_P0_Rep1_align.sam -@ 24 -o Brain_P0_Rep1_align_sorted.bam
 samtools index Brain_P0_Rep1_align_sorted.bam
 samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
 
@@ -19,7 +19,6 @@ samtools view -b -L ../bin/Macaca.chrom_nomito.bed Brain_P0_Rep1_align_sorted.ba
 samtools sort Brain_P0_Rep1_align_nomito.bam -@ 20 -o Brain_P0_Rep1_align_nomito_sorted.bam
 samtools index Brain_P0_Rep1_align_nomito_sorted.bam
 samtools flagstat Brain_P0_Rep1_align_nomito_sorted.bam > Brain_P0_Rep1_align_nomito_sorted_stat.log
-
 
 ### rm unmapped lowq reads ${mapq_thresh}=30?
 samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_nomito_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_nomito_filt.bam
@@ -66,7 +65,7 @@ bedtools slop -i Brain_P0_Rep1_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Ma
 sort -k1,1 -k2,2n Brain_P0_Rep1.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > Brain_P0_Rep1.pval.signal.srt.bedgraph
 bedGraphToBigWig Brain_P0_Rep1.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bigwig
 
-##Fragment distribution
-echo "conda activate R3.6" >> $path1/${file1}.pbs
-echo "java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt" >> $path1/${file1}.pbs
-echo "conda deactivate" >> $path1/${file1}.pbs
+## Fragment distribution
+conda activate R3.6
+java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt
+conda deactivate
