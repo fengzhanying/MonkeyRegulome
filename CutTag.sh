@@ -5,35 +5,32 @@ mkdir QC_result
 fastqc -t 20 ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/*.gz -o ./QC_result/
 
 ##trimming fastp
-fastp -i ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz -I ../../mm10/Brain/cut-tag/P0/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1/CUT-Tag-RM22050502_P0-Brain-H3K27ac-1_2.fq.gz -o Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz -O Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_H3K27ac_P0_Rep1_fastp.json --html Brain_H3K27ac_P0_Rep1_fastp.html 2> Brain_H3K27ac_P0_Rep1_fastp.log
+fastp -i ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz -I ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_2.fq.gz -o Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz -O Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 16 --json Brain_H3K27ac_P0_Rep1_fastp.json --html Brain_H3K27ac_P0_Rep1_fastp.html 2> Brain_H3K27ac_P0_Rep1_fastp.log
 fastqc -t 20 Brain_H3K27ac_P0_Rep1_*.fq.gz -o QC_result
 ##alignment
 bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 Brain_H3K27ac_P0_Rep1_R1.trimmed.fq.gz  -2 Brain_H3K27ac_P0_Rep1_R2.trimmed.fq.gz -S Brain_H3K27ac_P0_Rep1_align.sam --met-file Brain_H3K27ac_P0_Rep1_align_result.log &> Brain_H3K27ac_P0_Rep1_align.log
 
-samtools sort Brain_P0_Rep1_align.sam -@ 20 -o Brain_P0_Rep1_align_sorted.bam
-samtools index Brain_P0_Rep1_align_sorted.bam
+samtools sort Brain_H3K27ac_P0_Rep1_align.sam -@ 20 -o Brain_H3K27ac_P0_Rep1_align_sorted.bam
+samtools index Brain_H3K27ac_P0_Rep1_align_sorted.bam
 ### Need non-mito BAM？
-samtools sort -n Brain_P0_Rep1_align_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted.samstat_qc
-samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_stat.log
+samtools flagstat Brain_H3K27ac_P0_Rep1_align_sorted.bam > Brain_H3K27ac_P0_Rep1_align_sorted_stat.log
 
 ### rm unmapped lowq reads ${mapq_thresh}=30?
-samtools view -F 1804 -f 2 -q 30 -u Brain_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_P0_Rep1_align_sorted_filt.bam
-samtools fixmate -r Brain_P0_Rep1_align_sorted_filt.bam Brain_P0_Rep1_align_sorted_filt_fixmate.bam
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam
+samtools view -F 1804 -f 2 -q 30 -u Brain_H3K27ac_P0_Rep1_align_sorted.bam | samtools sort -n /dev/stdin -o Brain_H3K27ac_P0_Rep1_align_sorted_filt.bam
+samtools fixmate -r Brain_H3K27ac_P0_Rep1_align_sorted_filt.bam Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate.bam
+samtools sort Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate.bam -@ 20 -o Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted.bam
 
 ##mark dup
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -M Brain_P0_Rep1_align_sorted_markDup.log
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
-samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
-samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.samstat_qc
-samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted_stat.log
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -M Brain_H3K27ac_P0_Rep1_align_sorted_markDup.log
+samtools sort Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup.bam -@ 20 -o Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
+samtools index Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam
+samtools flagstat Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted.bam > Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_markDup_sorted_stat.log
 
 ##rm duplicates
-java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_P0_Rep1_align_sorted_rmDup.log
-samtools sort Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools index Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
-samtools sort -n Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam -O sam | SAMstats --sorted_sam_file - --outf Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.samstat_qc
-samtools flagstat Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_stat.log
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted.bam -O Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam --REMOVE_DUPLICATES true -M Brain_H3K27ac_P0_Rep1_align_sorted_rmDup.log
+samtools sort Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup.bam -@ 20 -o Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools index Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam
+samtools flagstat Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted.bam > Brain_H3K27ac_P0_Rep1_align_sorted_filt_fixmate_sorted_rmDup_sorted_stat.log
 
 
 
