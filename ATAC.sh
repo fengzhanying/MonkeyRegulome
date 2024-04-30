@@ -16,7 +16,7 @@ samtools flagstat Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_sorted_st
 
 ## rm mito
 samtools view -b -L ../bin/Macaca.chrom_nomito.bed Brain_P0_Rep1_align_sorted.bam > Brain_P0_Rep1_align_nomito.bam
-samtools sort Brain_P0_Rep1_align_nomito.bam -@ 20 -o Brain_P0_Rep1_align_nomito_sorted.bam
+samtools sort Brain_P0_Rep1_align_nomito.bam -@ 24 -o Brain_P0_Rep1_align_nomito_sorted.bam
 samtools index Brain_P0_Rep1_align_nomito_sorted.bam
 samtools flagstat Brain_P0_Rep1_align_nomito_sorted.bam > Brain_P0_Rep1_align_nomito_sorted_stat.log
 
