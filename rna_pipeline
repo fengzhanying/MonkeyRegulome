@@ -2,6 +2,8 @@ fq1=$1
 fq2=$2
 sample=$3
 
+mkdir $sample; cd $sample
+
 fastp -i ${fq1} -I ${fq2} -o ./${sample}_R1.trimmed.fq.gz -O ./${sample}_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 24 --json ${sample}_fastp.json --html ${sample}_fastp.html 2> ${sample}_fastp.log
 
 ### task align
