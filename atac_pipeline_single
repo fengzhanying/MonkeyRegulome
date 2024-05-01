@@ -61,16 +61,16 @@ macs2 callpeak -t ${sample}.tagAlign.gz -g 3077605270 -B --keep-dup all --nomode
 mkdir ./BedGraph ./BigWig
 macs2 bdgcmp -t ${sample}_treat_pileup.bdg -c ${sample}_control_lambda.bdg --o-prefix ${sample} -m FE
 bedtools slop -i ${sample}_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.fc.signal.bedgraph
-sort -k1,1 -k2,2n ${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > ./BedGraph/${sample}.fc.signal.srt.bedgraph
-bedGraphToBigWig ${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.fc.signal.bigwig
+sort -k1,1 -k2,2n ./BedGraph/${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > ./BedGraph/${sample}.fc.signal.srt.bedgraph
+bedGraphToBigWig ./BedGraph/${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.fc.signal.bigwig
 
 ### create pvalue bw file
 sval=`zcat ${sample}.tagAlign.gz | wc -l`
 sval=`echo "scale = 2; $sval / 1000000" | bc`
 macs2 bdgcmp -t ${sample}_treat_pileup.bdg -c ${sample}_control_lambda.bdg --o-prefix ${sample} -m ppois -S ${sval}
 bedtools slop -i ${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.pval.signal.bedgraph
-sort -k1,1 -k2,2n ${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./BedGraph/${sample}.pval.signal.srt.bedgraph
-bedGraphToBigWig ${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.pval.signal.bigwig
+sort -k1,1 -k2,2n ./BedGraph/${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./BedGraph/${sample}.pval.signal.srt.bedgraph
+bedGraphToBigWig ./BedGraph/${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.pval.signal.bigwig
 
 ## Fragment distribution
 mkdir ./InsertSize
