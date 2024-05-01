@@ -14,13 +14,14 @@ fastp -i ${fq1} -I ${fq2} -o ${sample}_R1.trimmed.fq.gz -O ${sample}_R2.trimmed.
 fastqc -t 20 *.trimmed.fq.gz -o ./QC_result
 
 ## Bowtie2
-bowtie2 -p 30 -X 2000 --mm -x ../Bowtie2/Index/Macaca/Macaca -1 ${sample}_R1.trimmed.fq.gz  -2 ${sample}_R2.trimmed.fq.gz -S ${sample}_align.sam --met-file ${sample}_align_result.log &> ./Log/${sample}_align.log
+bw2_index="/lustre/home/zhangfy/Pipeline/Bowtie2/Index/Macaca/Macaca"
+bowtie2 -p 30 -X 2000 --mm -x $bw2_index -1 ${sample}_R1.trimmed.fq.gz  -2 ${sample}_R2.trimmed.fq.gz -S ${sample}_align.sam --met-file ${sample}_align_result.log &> ./Log/${sample}_align.log
 samtools sort ${sample}_align.sam -@ 24 -o ${sample}_align_sorted.bam
 samtools index ${sample}_align_sorted.bam
 samtools flagstat ${sample}_align_sorted.bam > ./Log/${sample}_align_sorted_stat.log
 
 ## rm mito
-samtools view -b -L ../bin/Macaca.chrom_nomito.bed ${sample}_align_sorted.bam > ${sample}_align_nomito.bam
+samtools view -b -L /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom_nomito.bed ${sample}_align_sorted.bam > ${sample}_align_nomito.bam
 samtools sort ${sample}_align_nomito.bam -@ 24 -o ${sample}_align_nomito_sorted.bam
 samtools index ${sample}_align_nomito_sorted.bam
 samtools flagstat ${sample}_align_nomito_sorted.bam > ./Log/${sample}_align_nomito_sorted_stat.log
