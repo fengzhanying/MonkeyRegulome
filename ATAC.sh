@@ -67,5 +67,5 @@ bedGraphToBigWig Brain_P0_Rep1.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pip
 
 ## Fragment distribution
 conda activate R3.6
-java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H $path3/trim_data/align/${file1}_InsertSize.pdf -I $path3/trim_data/align/${file1}_final_sort.bam -O $path3/trim_data/align/${file1}_InsertSize.txt
+java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H Brain_P0_Rep1_InsertSize.pdf -I Brain_P0_Rep1_final.bam -O Brain_P0_Rep1_InsertSize.txt
 conda deactivate
