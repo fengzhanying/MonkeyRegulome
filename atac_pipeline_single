@@ -65,7 +65,7 @@ bedGraphToBigWig ${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/
 
 ### create pvalue bw file
 sval=`zcat ${sample}.tagAlign.gz | wc -l`
-sval=`expr $sval / 1000000`
+sval=`echo "scale = 2; $sval / 1000000" | bc`
 macs2 bdgcmp -t ${sample}_treat_pileup.bdg -c ${sample}_control_lambda.bdg --o-prefix ${sample} -m ppois -S ${sval}
 bedtools slop -i ${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.pval.signal.bedgraph
 sort -k1,1 -k2,2n ${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./BedGraph/${sample}.pval.signal.srt.bedgraph
