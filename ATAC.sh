@@ -66,6 +66,5 @@ sort -k1,1 -k2,2n Brain_P0_Rep1.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{
 bedGraphToBigWig Brain_P0_Rep1.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bigwig
 
 ## Fragment distribution
-conda activate R3.6
+
 java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H Brain_P0_Rep1_InsertSize.pdf -I Brain_P0_Rep1_final.bam -O Brain_P0_Rep1_InsertSize.txt
-conda deactivate
