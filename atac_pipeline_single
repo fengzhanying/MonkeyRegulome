@@ -72,7 +72,7 @@ sort -k1,1 -k2,2n ${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (
 bedGraphToBigWig ${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.pval.signal.bigwig
 
 ## Fragment distribution
-mkdir InsertSize
+mkdir ./InsertSize
 conda activate R3.6
 java -jar /lustre/home/zhangfy/data0428/picard.jar CollectInsertSizeMetrics -H ./InsertSize/${sample}_InsertSize.pdf -I ${sample}.bam -O ./InsertSize/${sample}_InsertSize.txt
 conda deactivate
