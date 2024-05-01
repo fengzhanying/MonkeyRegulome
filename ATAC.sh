@@ -59,7 +59,7 @@ bedGraphToBigWig Brain_P0_Rep1.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipel
 
 ### create pvalue bw file
 sval=`zcat Brain_P0_Rep1.tagAlign.gz | wc -l`
-sval=`expr $sval / 1000000`
+sval=`echo "scale = 2; $sval / 1000000" | bc`
 macs2 bdgcmp -t Brain_P0_Rep1_treat_pileup.bdg -c Brain_P0_Rep1_control_lambda.bdg --o-prefix Brain_P0_Rep1 -m ppois -S ${sval}
 bedtools slop -i Brain_P0_Rep1_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes Brain_P0_Rep1.pval.signal.bedgraph
 sort -k1,1 -k2,2n Brain_P0_Rep1.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > Brain_P0_Rep1.pval.signal.srt.bedgraph
