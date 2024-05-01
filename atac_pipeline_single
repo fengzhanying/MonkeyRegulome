@@ -15,7 +15,7 @@ fastqc -q -t 20 *.trimmed.fq.gz -o ./QC_result
 
 ## Bowtie2
 bw2_index="/lustre/home/zhangfy/Pipeline/Bowtie2/Index/Macaca/Macaca"
-bowtie2 -p 30 -X 2000 --mm -x $bw2_index -1 ${sample}_R1.trimmed.fq.gz  -2 ${sample}_R2.trimmed.fq.gz -S ${sample}_align.sam --met-file ${sample}_align_result.log &> ./Log/${sample}_align.log
+bowtie2 -p 30 -X 2000 --mm -x $bw2_index -1 ${sample}_R1.trimmed.fq.gz  -2 ${sample}_R2.trimmed.fq.gz -S ${sample}_align.sam --met-file ./Log/${sample}_align_result.log &> ./Log/${sample}_align.log
 samtools sort ${sample}_align.sam -@ 24 -o ./Bam/${sample}_align_sorted.bam
 samtools index ./Bam/${sample}_align_sorted.bam
 samtools flagstat ./Bam/${sample}_align_sorted.bam > ./Log/${sample}_align_sorted_stat.log
