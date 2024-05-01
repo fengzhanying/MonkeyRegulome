@@ -8,7 +8,7 @@ mkdir ./QC_result ./Log/
 fastqc -t 20 ${fq1} ${fq2} -o ./QC_result
 
 ## Trim Adapter
-fastp -i ${fq1} -I ${fq2} -o ${sample}_R1.trimmed.fq.gz -O ${sample}_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 24 --json ${sample}_fastp.json --html ${sample}_fastp.html 2> ./Log/${sample}_fastp.log
+fastp -i ${fq1} -I ${fq2} -o ${sample}_R1.trimmed.fq.gz -O ${sample}_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 24 --json ./Log/${sample}_fastp.json --html ./Log/${sample}_fastp.html 2> ./Log/${sample}_fastp.log
 
 ## QC trim
 fastqc -t 20 *.trimmed.fq.gz -o ./QC_result
