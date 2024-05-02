@@ -1,4 +1,6 @@
-
+ta1=$1
+ta2=$2
+sample=$3
 mkdir $sample
-zcat ${REP1_TA_FILE} ${REP2_TA_FILE} | gzip -nc > ${sample}/${POOLED_TA_FILE}
-macs2 callpeak -t ./sample/${sample}.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ./Sample/${sample} --SPMR
+zcat ${ta1} ${ta2} | gzip -nc > ${sample}/${sample}.pooled.tagAlign.gz
+macs2 callpeak -t ${sample}/${sample}.pooled.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ./${sample}/${sample} --SPMR
