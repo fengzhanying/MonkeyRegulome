@@ -1,0 +1,4 @@
+
+mkdir $sample
+zcat ${REP1_TA_FILE} ${REP2_TA_FILE} | gzip -nc > ${sample}/${POOLED_TA_FILE}
+macs2 callpeak -t ./sample/${sample}.tagAlign.gz -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ./Sample/${sample} --SPMR
