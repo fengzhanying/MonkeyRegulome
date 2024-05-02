@@ -64,7 +64,7 @@ sort -k1,1 -k2,2n ./BedGraph/${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"
 bedGraphToBigWig ./BedGraph/${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.fc.signal.bigwig
 
 ### create pvalue bw file
-sval=`zcat ${sample}.tagAlign.gz | wc -l`
+sval=`zcat ./Peak/${sample}.tagAlign.gz | wc -l`
 sval=`echo "scale = 2; $sval / 1000000" | bc`
 macs2 bdgcmp -t ./Peak/${sample}_treat_pileup.bdg -c ./Peak/${sample}_control_lambda.bdg --o-prefix ./Peak/${sample} -m ppois -S ${sval}
 bedtools slop -i ./Peak/${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.pval.signal.bedgraph
