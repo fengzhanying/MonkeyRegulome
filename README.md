@@ -31,7 +31,7 @@ cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-T
 # cutag_pipeline_merge ta1 ta2 sample_name
 cutag_pipeline_merge /lustre/home/zhangfy/Pipeline/Test/Brain_P0_IgG_Rep1/Bam/Brain_P0_IgG_Rep1.tagAlign.gz /lustre/home/zhangfy/Pipeline/Test/Brain_P0_IgG_Rep2/Bam/Brain_P0_IgG_Rep2.tagAlign.gz Brain_P0_IgG
 ```
-Run every marker:
+Run every replicate of histone marker:
 ```bash
 # cutag_pipeline_align fq1 fq2 replicate_name
 cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_2.fq.gz Brain_P0_H3K27ac_Rep1
