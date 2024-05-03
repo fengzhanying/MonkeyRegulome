@@ -1,0 +1,7 @@
+ta1=$1
+ta2=$2
+sample=$3
+mkdir ./$sample/; cd ./$sample/
+mkdir ./Peak/
+zcat ${ta1} ${ta2} | gzip -nc > ./Peak/${sample}.pooled.tagAlign.gz
+cd ..
