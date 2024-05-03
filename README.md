@@ -22,7 +22,17 @@ atac_pipeline_merge ta1 ta2 Brain_P0
 
 ## Cut&Tag
 For Cut&Tag data, run as follows:
+Run Igg:
 ```bash
 # cutag_pipeline_align fq1 fq2 sample_name
-cutag_pipeline_align ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R1.fq.gz ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R2.fq.gz Brain_P0_Rep1
+cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-Igg-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-Igg-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_Igg
+```
+Run every replicate:
+```bash
+cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_H3K27ac_Rep1
+cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_H3K27ac_Rep2
+```
+Then call peak:
+```bash
+cutag_pipeline_align ta1 ta2 cta sample_name
 ```
