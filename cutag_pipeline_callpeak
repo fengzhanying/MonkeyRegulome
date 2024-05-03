@@ -3,19 +3,41 @@ cta=$2
 sample=$3
 
 cd ./$sample/
-macs2 callpeak -t $ta -c $cta -g 3077605270 -B --broad --keep-dup all --nomodel --shift -100 --extsize 200 -n ./Peak/${sample} --SPMR
+mkdir ./BroadPeak/
+macs2 callpeak -t $ta -c $cta -g 3077605270 -B --broad --keep-dup all --nomodel --shift -100 --extsize 200 -n ./BroadPeak/${sample} --SPMR
 
 ### create fc bw file
-mkdir ./BedGraph/ ./BigWig/
-macs2 bdgcmp -t ./Peak/${sample}_treat_pileup.bdg -c ./Peak/${sample}_control_lambda.bdg --o-prefix ./Peak/${sample} -m FE
-bedtools slop -i ./Peak/${sample}_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.fc.signal.bedgraph
-sort -k1,1 -k2,2n ./BedGraph/${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > ./BedGraph/${sample}.fc.signal.srt.bedgraph
-bedGraphToBigWig ./BedGraph/${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.fc.signal.bigwig
+mkdir ./BroadBedGraph/ ./BroadBigWig/
+macs2 bdgcmp -t ./BroadPeak/${sample}_treat_pileup.bdg -c ./BroadPeak/${sample}_control_lambda.bdg --o-prefix ./BroadPeak/${sample} -m FE
+bedtools slop -i ./BroadPeak/${sample}_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BroadBedGraph/${sample}.fc.signal.bedgraph
+sort -k1,1 -k2,2n ./BroadBedGraph/${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > ./BroadBedGraph/${sample}.fc.signal.srt.bedgraph
+bedGraphToBigWig ./BroadBedGraph/${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BroadBigWig/${sample}.fc.signal.bigwig
 
 ### create pvalue bw file
-sval=`zcat ./Peak/${sample}.pooled.tagAlign.gz | wc -l`
+sval=`zcat ${ta} | wc -l`
 sval=`echo "scale = 2; $sval / 1000000" | bc`
-macs2 bdgcmp -t ./Peak/${sample}_treat_pileup.bdg -c ./Peak/${sample}_control_lambda.bdg --o-prefix ./Peak/${sample} -m ppois -S ${sval}
-bedtools slop -i ./Peak/${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BedGraph/${sample}.pval.signal.bedgraph
-sort -k1,1 -k2,2n ./BedGraph/${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./BedGraph/${sample}.pval.signal.srt.bedgraph
-bedGraphToBigWig ./BedGraph/${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BigWig/${sample}.pval.signal.bigwig
+macs2 bdgcmp -t ./BroadPeak/${sample}_treat_pileup.bdg -c ./BroadPeak/${sample}_control_lambda.bdg --o-prefix ./BroadPeak/${sample} -m ppois -S ${sval}
+bedtools slop -i ./BroadPeak/${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BroadBedGraph/${sample}.pval.signal.bedgraph
+sort -k1,1 -k2,2n ./BroadBedGraph/${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./BroadBedGraph/${sample}.pval.signal.srt.bedgraph
+bedGraphToBigWig ./BroadBedGraph/${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./BroadBigWig/${sample}.pval.signal.bigwig
+
+
+mkdir ./NarrowPeak/
+macs2 callpeak -t $ta -c $cta -g 3077605270 -B--keep-dup all --nomodel --shift -100 --extsize 200 -n ./NarrowPeak/${sample} --SPMR
+
+### create fc bw file
+mkdir ./NarrowBedGraph/ ./NarrowBigWig/
+macs2 bdgcmp -t ./NarrowPeak/${sample}_treat_pileup.bdg -c ./NarrowPeak/${sample}_control_lambda.bdg --o-prefix ./NarrowPeak/${sample} -m FE
+bedtools slop -i ./NarrowPeak/${sample}_FE.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./NarrowBedGraph/${sample}.fc.signal.bedgraph
+sort -k1,1 -k2,2n ./NarrowBedGraph/${sample}.fc.signal.bedgraph | awk 'BEGIN{OFS="\\t"}{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {print $0}; prev_chr=$1; prev_chr_e=$3;}' > ./NarrowBedGraph/${sample}.fc.signal.srt.bedgraph
+bedGraphToBigWig ./NarrowBedGraph/${sample}.fc.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./NarrowBigWig/${sample}.fc.signal.bigwig
+
+### create pvalue bw file
+sval=`zcat ${ta} | wc -l`
+sval=`echo "scale = 2; $sval / 1000000" | bc`
+macs2 bdgcmp -t ./NarrowPeak/${sample}_treat_pileup.bdg -c ./BroadPeak/${sample}_control_lambda.bdg --o-prefix ./NarrowPeak/${sample} -m ppois -S ${sval}
+bedtools slop -i ./NarrowPeak/${sample}_ppois.bdg -g /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes -b 0 | bedClip stdin /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./NarrowBedGraph/${sample}.pval.signal.bedgraph
+sort -k1,1 -k2,2n ./NarrowBedGraph/${sample}.pval.signal.bedgraph | awk 'BEGIN{{OFS="\\t"}}{{if (NR==1 || NR>1 && (prev_chr!=$1 || prev_chr==$1 && prev_chr_e<=$2)) {{print $0}}; prev_chr=$1; prev_chr_e=$3;}}' > ./NarrowBedGraph/${sample}.pval.signal.srt.bedgraph
+bedGraphToBigWig ./NarrowBedGraph/${sample}.pval.signal.srt.bedgraph /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ./NarrowBigWig/${sample}.pval.signal.bigwig
+
+cd ..
