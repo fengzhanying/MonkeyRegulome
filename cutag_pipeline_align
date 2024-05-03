@@ -1,0 +1,60 @@
+fq1=$1
+fq2=$2
+sample=$3
+
+## QC raw
+mkdir $sample;cd $sample
+mkdir ./QC_result ./Log/ ./Bam/
+fastqc -q -t 20 ${fq1} ${fq2} -o ./QC_result
+
+## Trim Adapter
+fastp -i ${fq1} -I ${fq2} -o ${sample}_R1.trimmed.fq.gz -O ${sample}_R2.trimmed.fq.gz --detect_adapter_for_pe --thread 24 --json ./Log/${sample}_fastp.json --html ./Log/${sample}_fastp.html 2> ./Log/${sample}_fastp.log
+
+## QC trim
+fastqc -q -t 20 *.trimmed.fq.gz -o ./QC_result
+
+## Bowtie2
+bw2_index="/lustre/home/zhangfy/Pipeline/Bowtie2/Index/Macaca/Macaca"
+bowtie2 -p 30 -X 2000 --mm -x $bw2_index -1 ${sample}_R1.trimmed.fq.gz  -2 ${sample}_R2.trimmed.fq.gz -S ${sample}_align.sam --met-file ./Log/${sample}_align_result.log &> ./Log/${sample}_align.log
+samtools sort ${sample}_align.sam -@ 24 -o ./Bam/${sample}_align_sorted.bam
+samtools index ./Bam/${sample}_align_sorted.bam
+samtools flagstat ./Bam/${sample}_align_sorted.bam > ./Log/${sample}_align_sorted_stat.log
+
+## rm mito
+samtools view -b -L /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom_nomito.bed ./Bam/${sample}_align_sorted.bam > ./Bam/${sample}_align_nomito.bam
+samtools sort ./Bam/${sample}_align_nomito.bam -@ 24 -o ./Bam/${sample}_align_nomito_sorted.bam
+samtools index ./Bam/${sample}_align_nomito_sorted.bam
+samtools flagstat ./Bam/${sample}_align_nomito_sorted.bam > ./Log/${sample}_align_nomito_sorted_stat.log
+
+### rm unmapped lowq reads ${mapq_thresh}=30?
+samtools view -F 1804 -f 2 -q 30 -u ./Bam/${sample}_align_nomito_sorted.bam | samtools sort -n /dev/stdin -o ./Bam/${sample}_align_nomito_filt.bam
+samtools fixmate -r ./Bam/${sample}_align_nomito_filt.bam ./Bam/${sample}_align_nomito_filt_fixmate.bam
+samtools sort ./Bam/${sample}_align_nomito_filt_fixmate.bam -@ 20 -o ./Bam/${sample}_align_nomito_filt_fixmate_sorted.bam
+samtools index ./Bam/${sample}_align_nomito_filt_fixmate_sorted.bam
+samtools flagstat ./Bam/${sample}_align_nomito_filt_fixmate_sorted.bam > ./Log/${sample}_align_nomito_filt_fixmate_sorted_stat.log
+
+## mark dup
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I ./Bam/${sample}_align_nomito_filt_fixmate_sorted.bam -O ./Bam/${sample}_align_nomito_filt_fixmate_markDup.bam -M ./Log/${sample}_align_nomito_filt_fixmate_markDup.log
+samtools sort ./Bam/${sample}_align_nomito_filt_fixmate_markDup.bam -@ 20 -o ./Bam/${sample}_align_nomito_filt_fixmate_markDup_sorted.bam
+samtools index ./Bam/${sample}_align_nomito_filt_fixmate_markDup_sorted.bam
+samtools flagstat ./Bam/${sample}_align_nomito_filt_fixmate_markDup_sorted.bam > ./Log/${sample}_align_nomito_filt_fixmate_markDup_sorted_stat.log
+
+## rm duplicates
+java -jar /lustre/home/zhangfy/data0428/picard.jar MarkDuplicates -I ./Bam/${sample}_align_nomito_filt_fixmate_sorted.bam -O ./Bam/${sample}_align_nomito_filt_fixmate_rmDup.bam --REMOVE_DUPLICATES true -M ./Log/${sample}_align_nomito_filt_fixmate_rmDup.log
+samtools sort ./Bam/${sample}_align_nomito_filt_fixmate_rmDup.bam -@ 20 -o ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_sorted.bam
+samtools index ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_sorted.bam
+samtools flagstat ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_sorted.bam > ./Log/${sample}_align_nomito_filt_fixmate_rmDup_sorted_stat.log
+
+## shift +4/-5
+alignmentSieve --numberOfProcessors 20 --ATACshift -b ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_sorted.bam -o ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_shifted.bam
+samtools sort ./Bam/${sample}_align_nomito_filt_fixmate_rmDup_shifted.bam -@ 20 -o ./Bam/${sample}_final.bam
+samtools index ./Bam/${sample}_final.bam
+samtools flagstat ./Bam/${sample}_final.bam > ./Log/${sample}_final.log
+
+### call peak
+samtools sort ./Bam/${sample}_final.bam -n -@ 24 -o ./Bam/${sample}.bam
+bedtools bamtobed -bedpe -mate1 -i ./Bam/${sample}.bam | gzip -nc > ./Bam/${sample}.bedpe.gz
+zcat -f ./Bam/${sample}.bedpe.gz | awk 'BEGIN{OFS="\t"}{printf "%s\t%s\t%s\tN\t1000\t%s\n%s\t%s\t%s\tN\t1000\t%s\n",$1,$2,$3,$9,$4,$5,$6,$10}' | gzip -nc > ./Bam/${sample}.tagAlign.gz
+
+rm ${sample}_align.sam ${sample}_*.trimmed.fq.gz
+cd ..
