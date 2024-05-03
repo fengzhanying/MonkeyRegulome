@@ -24,15 +24,21 @@ atac_pipeline_merge ta1 ta2 Brain_P0
 For Cut&Tag data, run as follows:
 Run Igg:
 ```bash
-# cutag_pipeline_align fq1 fq2 sample_name
-cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-Igg-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-Igg-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_Igg
+# cutag_pipeline_align fq1 fq2 replicate_name
+cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-1/CUT-Tag-RM22050501_P0-Brain-IgG-1_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-1/CUT-Tag-RM22050501_P0-Brain-IgG-1_2.fq.gz Brain_P0_IgG_Rep1
+cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-2/CUT-Tag-RM22050501_P0-Brain-IgG-2_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-2/CUT-Tag-RM22050501_P0-Brain-IgG-2_2.fq.gz Brain_P0_IgG_Rep2
+# cutag_pipeline_merge ta1 ta2 sample_name
+cutag_pipeline_merge /lustre/home/zhangfy/Pipeline/Test/Brain_P0_IgG_Rep1/Bam/Brain_P0_IgG_Rep1.tagAlign.gz /lustre/home/zhangfy/Pipeline/Test/Brain_P0_IgG_Rep2/Bam/Brain_P0_IgG_Rep2.tagAlign.gz Brain_P0_IgG
 ```
-Run every replicate:
+Run every marker:
 ```bash
-cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_H3K27ac_Rep1
-cutag_pipeline_align ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz ../../MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz Brain_P0_H3K27ac_Rep2
+# cutag_pipeline_align fq1 fq2 replicate_name
+cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1/CUT-Tag-RM22050501_P0-Brain-H3K27ac-1_2.fq.gz Brain_P0_H3K27ac_Rep1
+cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-2/CUT-Tag-RM22050501_P0-Brain-H3K27ac-2_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-H3K27ac-2/CUT-Tag-RM22050501_P0-Brain-H3K27ac-2_2.fq.gz Brain_P0_H3K27ac_Rep2
+# cutag_pipeline_merge ta1 ta2 sample_name
+cutag_pipeline_merge /lustre/home/zhangfy/Pipeline/Test/Brain_P0_H3K27ac_Rep1/Bam/Brain_P0_H3K27ac_Rep1.tagAlign.gz /lustre/home/zhangfy/Pipeline/Test/Brain_P0_H3K27ac_Rep2/Bam/Brain_P0_H3K27ac_Rep2.tagAlign.gz Brain_P0_H3K27ac
 ```
 Then call peak:
 ```bash
-cutag_pipeline_align ta1 ta2 cta sample_name
+cutag_pipeline_callpeak ta1 ta2 cta sample_name
 ```
