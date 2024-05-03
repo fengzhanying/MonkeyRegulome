@@ -23,7 +23,7 @@ atac_pipeline_merge ta1 ta2 Brain_P0
 
 ## Cut&Tag
 For Cut&Tag data, run as follows: <br>
-Run Igg:
+Run IgG:
 ```bash
 # cutag_pipeline_align fq1 fq2 replicate_name
 cutag_pipeline_align /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-1/CUT-Tag-RM22050501_P0-Brain-IgG-1_1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/cuttag/P0/CUT-Tag-RM22050501_P0-Brain-IgG-1/CUT-Tag-RM22050501_P0-Brain-IgG-1_2.fq.gz Brain_P0_IgG_Rep1
