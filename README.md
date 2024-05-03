@@ -40,5 +40,6 @@ cutag_pipeline_merge /lustre/home/zhangfy/Pipeline/Test/Brain_P0_H3K27ac_Rep1/Ba
 ```
 Then call peak:
 ```bash
-cutag_pipeline_callpeak ta1 ta2 cta sample_name
+# cutag_pipeline_callpeak ta cta sample_name
+cutag_pipeline_callpeak /lustre/home/zhangfy/Pipeline/Test/Brain_P0_H3K27ac/Ta/Brain_P0_H3K27ac.pooled.tagAlign.gz /lustre/home/zhangfy/Pipeline/Test/Brain_P0_IgG/Ta/Brain_P0_IgG.pooled.tagAlign.gz Brain_P0_H3K27ac
 ```
