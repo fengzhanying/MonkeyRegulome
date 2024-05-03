@@ -17,12 +17,12 @@ atac_pipeline_single /lustre/home/zhangfy/MacaqueTtoT-test/Brain/atac/RM22050501
 Then call peak by merging all replicates
 ```bash
 # atac_pipeline_single ta1 ta2 sample_name
-atac_pipeline_callpeak ta1 ta2 Brain_P0
+atac_pipeline_merge ta1 ta2 Brain_P0
 ```
 
 ## Cut&Tag
 For Cut&Tag data, run as follows:
 ```bash
-# atac_pipeline fq1 fq2 sample_name
-cutag_pipeline ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R1.fq.gz ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R2.fq.gz Brain_P0_Rep1
+# cutag_pipeline_align fq1 fq2 sample_name
+cutag_pipeline_align ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R1.fq.gz ../../mm10/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R2.fq.gz Brain_P0_Rep1
 ```
