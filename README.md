@@ -8,7 +8,8 @@ For RNA-seq data, run as follows:
 rna_pipeline /lustre/home/zhangfy/MacaqueTtoT-test/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/rna/RM22050501-P0-RNA/RM22050501-P0-RNA_R2.fq.gz Brain_P0_Rep1
 ```
 ## ATAC-seq
-For ATAC-seq data, run every replicate as follows:
+For ATAC-seq data, run every replicate as follows: <br>
+Run every repliacte:
 ```bash
 # atac_pipeline_single fq1 fq2 replicate_name
 atac_pipeline_single /lustre/home/zhangfy/MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R1.fq.gz /lustre/home/zhangfy/MacaqueTtoT-test/Brain/atac/RM22050501-Bulk-ATAC-1/RM22050501-Bulk-ATAC-1_R2.fq.gz Brain_P0_Rep1
@@ -21,7 +22,7 @@ atac_pipeline_merge ta1 ta2 Brain_P0
 ```
 
 ## Cut&Tag
-For Cut&Tag data, run as follows:
+For Cut&Tag data, run as follows: <br>
 Run Igg:
 ```bash
 # cutag_pipeline_align fq1 fq2 replicate_name
