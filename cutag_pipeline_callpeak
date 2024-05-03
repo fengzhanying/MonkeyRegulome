@@ -23,7 +23,7 @@ bedGraphToBigWig ./BroadBedGraph/${sample}.pval.signal.srt.bedgraph /lustre/home
 
 
 mkdir ./NarrowPeak/
-macs2 callpeak -t $ta -c $cta -g 3077605270 -B--keep-dup all --nomodel --shift -100 --extsize 200 -n ./NarrowPeak/${sample} --SPMR
+macs2 callpeak -t $ta -c $cta -g 3077605270 -B --keep-dup all --nomodel --shift -100 --extsize 200 -n ./NarrowPeak/${sample} --SPMR
 
 ### create fc bw file
 mkdir ./NarrowBedGraph/ ./NarrowBigWig/
