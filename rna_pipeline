@@ -17,18 +17,18 @@ mkdir ./QC_result ./Log/
 ### task bam_to_signals
 /lustre/home/zhangfy/Pipeline/bin/STAR --runMode inputAlignmentsFromBAM --inputBAMfile Aligned.sortedByCoord.out.bam --outWigType bedGraph
 
-bedSort Signal.UniqueMultiple.str1.out.bg Signal.UniqueMultiple.str1.out.sorted.bg
-bedGraphToBigWig Signal.UniqueMultiple.str1.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_minusAll.bw
-bedSort Signal.UniqueMultiple.str2.out.bg Signal.UniqueMultiple.str2.out.sorted.bg
-bedGraphToBigWig Signal.UniqueMultiple.str2.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_plusAll.bw
+/lustre/home/zhangfy/Pipeline/bin/bedSort Signal.UniqueMultiple.str1.out.bg Signal.UniqueMultiple.str1.out.sorted.bg
+/lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig Signal.UniqueMultiple.str1.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_minusAll.bw
+/lustre/home/zhangfy/Pipeline/bin/bedSort Signal.UniqueMultiple.str2.out.bg Signal.UniqueMultiple.str2.out.sorted.bg
+/lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig Signal.UniqueMultiple.str2.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_plusAll.bw
 
-bedSort Signal.Unique.str1.out.bg Signal.Unique.str1.out.sorted.bg
-bedGraphToBigWig Signal.Unique.str1.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_minusUniq.bw
-bedSort Signal.Unique.str2.out.bg Signal.Unique.str2.out.sorted.bg
-bedGraphToBigWig Signal.Unique.str2.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_plusUniq.bw
+/lustre/home/zhangfy/Pipeline/bin/bedSort Signal.Unique.str1.out.bg Signal.Unique.str1.out.sorted.bg
+/lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig Signal.Unique.str1.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_minusUniq.bw
+/lustre/home/zhangfy/Pipeline/bin/bedSort Signal.Unique.str2.out.bg Signal.Unique.str2.out.sorted.bg
+/lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig Signal.Unique.str2.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_plusUniq.bw
 
 ### task rsem_quant
-rsem-calculate-expression --bam --estimate-rspd --calc-ci --seed 666 -p 24 --no-bam-output --ci-memory 100000 --paired-end Aligned.toTranscriptome.out.bam /lustre/home/zhangfy/Pipeline/RSEM/Macaca/ ${sample}_RSEM
+/lustre/home/zhangfy/Pipeline/bin/rsem-calculate-expression --bam --estimate-rspd --calc-ci --seed 666 -p 24 --no-bam-output --ci-memory 100000 --paired-end Aligned.toTranscriptome.out.bam /lustre/home/zhangfy/Pipeline/RSEM/Macaca/ ${sample}_RSEM
 
 rm *.trimmed.fq.gz *bg
 ### MAD QC for replicates: Rscript {path_to_madR} {quants_1} {quants_2}
