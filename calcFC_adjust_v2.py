@@ -11,7 +11,7 @@ import getopt
 import re
 import os
 import multiprocessing
-
+import time
 help_message = '''
     USAGE: calcFC -p <hotspot> -b <bam>
 '''
@@ -29,18 +29,21 @@ def Partition(n,x,y):
     Par.append((s+29*e,n,x,y))
     return Par
 
+def HideFile(x):
+	return x[0:x.rfind('/')+1]+'.'+x[x.rfind('/')+1:len(x)]
+
 def ProcessPartition(arg):
     s, e, Hotfile, Bamfile = arg
-    Tmpfile = Hotfile + '_' + str(s) + '_' + str(e) + '.tmp'
+    Tmpfile = HideFile(Hotfile) + '_' + str(s) + '_' + str(e) + '.tmp'
     Out = open(Tmpfile,'w')
     for i in range(s,e+1):
         CommandRead = 'sed -n ' + str(i) + 'p ' + Hotfile
         line = os.popen(CommandRead).read()
-        peakLine = line.split('\t')
+        peakLine = (line.strip('\n')).split('\t')
         chrom = peakLine[0]
         start = peakLine[1]
         end = peakLine[2]
-        zscore = peakLine[3].strip('\n')
+        #zscore = peakLine[3].strip('\n')
         Region=chrom+":"+start+"-"+end 
         Command="samtools view "+Bamfile+ " "+Region +" -c"
         count=os.popen(Command).read();
@@ -69,7 +72,7 @@ def ProcessPartition(arg):
 
         FC1=a*(50000+Length)/Length/b
         FC2=a*(1000000+Length)/Length/c
-        Out.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(chrom, start, end, zscore, Length, a, b, FC1, c, FC2))
+        Out.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(chrom, start, end, Length, a, b, FC1, c, FC2))
     Out.close()
  
 
@@ -77,17 +80,22 @@ def processHot(Hotfile, Bamfile):
     """
         Load a hotspot file and calculate the fold change for each region.
     """
-    PeakNum = int((os.popen('wc -l ' + Hotfile).read()).split(' ')[0]);print(PeakNum)
-    Par = Partition(PeakNum, Hotfile, Bamfile)
-    pool = multiprocessing.Pool(30)
-    pool.map(ProcessPartition,Par)
-    pool.close();pool.join()
-    CommandMerge = 'cat '; CommandDel = 'rm -f '
-    for i in range(10):
-        CommandMerge += Hotfile + '_' + str(Par[i][0]) + '_' + str(a[i][1]) + '.tmp '
-        CommandMerge += Hotfile + '_' + str(Par[i][0]) + '_' + str(a[i][1]) + '.tmp '
-    CommandMerge += ('> ' + Hotfile+'.fc')
-    os.popen(CommandJoin);os.popen(CommandDel);
+    PeakNum = int((os.popen('wc -l ' + Hotfile).read()).split(' ')[0])
+    if PeakNum > 30:
+        Par = Partition(PeakNum, Hotfile, Bamfile)
+        pool = multiprocessing.Pool(30)
+        pool.map(ProcessPartition,Par)
+        pool.close();pool.join()
+        CommandMerge = 'cat '; CommandDel = 'rm -f '
+        for i in range(30):
+            CommandMerge += HideFile(Hotfile) + '_' + str(Par[i][0]) + '_' + str(Par[i][1]) + '.tmp '
+            CommandDel += HideFile(Hotfile) + '_' + str(Par[i][0]) + '_' + str(Par[i][1]) + '.tmp '
+        CommandMerge += ('> ' + Hotfile+'.fc')
+        os.popen(CommandMerge);time.sleep(180);os.popen(CommandDel);
+    else:
+        ProcessPartition((1, PeakNum, Hotfile, Bamfile))
+	CommandMv = 'mv ' + HideFile(Hotfile) + '_' + str(1) + '_' + str(PeakNum) + '.tmp ' + Hotfile+'.fc'
+	os.popen(CommandMv)
 
 def main(argv=None):
     if argv is None:
