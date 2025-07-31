@@ -11,6 +11,7 @@ do
 done
 
 mkdir -p $OUT_PATHS/MT2T_hg38_axt_out/
+
 for CHR in {1..22} X Y
 do
     ./binlastz-1.04.00 $OUT_PATHS/hg38_split/chr${CHR}.fa MT2T.fa \
