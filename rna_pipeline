@@ -27,6 +27,13 @@ mkdir ./QC_result ./Log/
 /lustre/home/zhangfy/Pipeline/bin/bedSort Signal.Unique.str2.out.bg Signal.Unique.str2.out.sorted.bg
 /lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig Signal.Unique.str2.out.sorted.bg /lustre/home/zhangfy/Pipeline/bin/Macaca.chrom.sizes ${sample}_plusUniq.bw
 
+
+/lustre/home/zhangfy/Pipeline/bin/STAR --runMode inputAlignmentsFromBAM --inputBAMfile ${InputFold}/${SampleName}Aligned.sortedByCoord.out.bam --outWigType bedGraph --outWigStrand Unstranded --outFileNamePrefix ${OutputFold}/${SampleName}.
+/lustre/home/zhangfy/Pipeline/bin/bedSort ${OutputFold}/${SampleName}.Signal.UniqueMultiple.str1.out.bg ${OutputFold}/${SampleName}.Signal.UniqueMultiple.str1.out.sorted.bg
+/lustre/home/zhangfy/Pipeline/bin/bedGraphToBigWig ${OutputFold}/${SampleName}.Signal.UniqueMultiple.str1.out.sorted.bg /lustre/home/zhangfy/fetalmonkey/Macaque.t-to-t/macaque_chromSize.txt ${OutputFold}/${SampleName}.bw
+
+rm -f ${OutputFold}/${SampleName}*bg
+
 ### task rsem_quant
 /lustre/home/zhangfy/Pipeline/bin/rsem-calculate-expression --bam --estimate-rspd --calc-ci --seed 666 -p 24 --no-bam-output --ci-memory 100000 --paired-end Aligned.toTranscriptome.out.bam /lustre/home/zhangfy/Pipeline/RSEM/Macaca/ ${sample}_RSEM
 
