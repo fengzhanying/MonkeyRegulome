@@ -44,6 +44,7 @@ cutag_pipeline_callpeak /lustre/home/zhangfy/Pipeline/Test/Brain_P0_H3K27ac/Ta/B
 ```
 
 ## GRN Atlas
+![GRN framework](GRN/GRN.png)
 Run GRN for every sample:
 ```bash
 Name=`cat ../MakePrior/SampleNameFile.txt | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
