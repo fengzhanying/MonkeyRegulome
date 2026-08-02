@@ -51,6 +51,7 @@ Name=`cat ../MakePrior/SampleNameFile.txt | head -n $SLURM_ARRAY_TASK_ID | tail 
 source PECA.sh ${Name}
 ```
 ## MIL model
+![MIL model](MultiInstanceLearning/MIL.png)
 Training for every organ:
 ```bash
 /home/users/zyfeng/MainDir/Software/Anaconda3/bin/python3 MonkeyMIL_Train.py \
