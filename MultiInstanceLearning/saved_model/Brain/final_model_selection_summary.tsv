@@ -1,0 +1,2 @@
+tissue	model_phase	n_rows	n_contexts	n_markers	n_selected_columns	best_epoch	best_selection_score	best_val_accuracy	best_val_balanced_accuracy	best_val_macro_f1
+Brain	refit_all	73893	9	10	90	16	0.5834507974014862	0.5768606224627876	0.5905255890758387	0.5834507974014862

@@ -1,0 +1,8 @@
+{
+  "CA-CTCF": 0,
+  "CA-H3K4me3": 1,
+  "PLS": 2,
+  "dELS": 3,
+  "pELS": 4,
+  "non_cCRE": 5
+}

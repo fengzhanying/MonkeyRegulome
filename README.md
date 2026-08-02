@@ -50,3 +50,37 @@ Name=`cat ../MakePrior/SampleNameFile.txt | head -n $SLURM_ARRAY_TASK_ID | tail 
 source PECA.sh ${Name}
 ```
 ## MIL model
+Training for every organ:
+```bash
+/home/users/zyfeng/MainDir/Software/Anaconda3/bin/python3 MonkeyMIL_Train.py \
+	--count-matrix ./CountMatrix/Monkey${tissue}Count.txt \
+	--out-dir ./saved_model/${tissue} \
+	--tissue $tissue \
+	--label-order CA-CTCF CA-H3K4me3 PLS dELS pELS non_cCRE \
+	--min-observed-markers 3 \
+	--n-splits 5 \
+	--learning-rate 3e-3 \
+	--lr-scheduler warmup-cosine \
+	--warmup-epochs 5 \
+	--min-learning-rate 1e-5 \
+	--val-fraction 0.1 \
+	--seed 20260613 \
+	--epochs 50 \
+	--patience 8 \
+	--batch-size 256 \
+	--eval-batch-size 512 \
+	--context-dropout-prob 0.0 \
+	--single-context-prob 0.0 \
+	--device cuda \
+	--amp
+```
+Predicting for every organ:
+```bash
+/home/users/zyfeng/MainDir/Software/Anaconda3/bin/python3 MonkeyMIL_Pred.py \
+	--model ./saved_model/${tissue}/final_model.pt \
+	--features ./${tissue}/Monkey${tissue}E130.prediction_input.tsv \
+	--out ./${tissue}/Monkey${tissue}E130.prediction_output.tsv \
+	--context-column context \
+	--device cuda \
+	--amp
+```
