@@ -1,5 +1,5 @@
-# Monkey ENCODE
-This repository deposit the codes for processing data of Monkey ENCODE
+# Monkey Regulome
+This repository deposit the codes for processing data of Monkey Regulome
 
 ## RNA-seq
 For RNA-seq data, run as follows:
