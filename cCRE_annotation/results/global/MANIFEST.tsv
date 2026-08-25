@@ -1,0 +1,6 @@
+file	size_bytes	lines	sha256	description
+Monkey_cCRE_Composition_Stats.csv	254	7	7A97744B00253D324A6351542DF04B179B68C6951E5014AE107B9022DEE8BC08	Global cCRE class counts and percentages.
+monkey_cCRE_developmental_annotation.tsv	71158527	687577	B29E5051590BEAFE0CC7060AF6C66FE213DEBB566AEC4C2298CA528396D0D764	Sample, tissue, and time-point support summary for global macaque cCRE anchors.
+cCRE_class_stats.txt	90	7	2BB3359FB2A69ABF77D399DD2EEE843A81323F2F31C6B6F0757C9B8F4B736408	Raw class-count table from the global cCRE classification.
+monkey_cCREs.bed.gz	TODO	TODO	TODO	Global coordinate-level BED5 output from 04.classification.
+monkey_cCREs_annotated.txt.gz	TODO	TODO	TODO	Full coordinate-level annotation table from 04.classification.
