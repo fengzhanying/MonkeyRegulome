@@ -80,8 +80,8 @@ The workflow writes intermediate files under `$CCRE_WORKDIR`:
 
 The preferred files to publish under `results/global/` are:
 
-- `monkey_cCREs.bed.gz`: global macaque cCRE coordinates and class labels.
-- `monkey_cCREs_annotated.txt.gz`: global macaque cCRE coordinates, nearest
+- `monkey_cCREs.bed`: global macaque cCRE coordinates and class labels.
+- `monkey_cCREs_annotated.txt`: global macaque cCRE coordinates, nearest
   gene/TSS information, mark z-scores, and class labels.
 - `cCRE_class_stats.txt`: class counts.
 - `Monkey_cCRE_Composition_Stats.csv`: class counts and percentages using
