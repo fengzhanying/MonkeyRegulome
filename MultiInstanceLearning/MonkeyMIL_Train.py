@@ -5,15 +5,20 @@ This model keeps a full fixed-tissue context schema, but each sample carries its
 own observed-marker mask and context-present mask.  At inference time, a sample
 can therefore provide one or more available time points while absent contexts
 are excluded from attention rather than treated as zero signal.
+
+Standalone entry point: requires NumPy, pandas, PyTorch, and scikit-learn,
+but no other project Python modules.
 """
 
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import math
+import random
 import re
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -23,20 +28,359 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from run_context_attention_mil_cv import (
-    LABEL_ORDER,
-    MARKER_ORDER,
-    fit_log_cpm_standardizer,
-    load_count_matrix,
-    make_class_weights,
-    metric_row,
-    scheduled_learning_rate,
-    set_optimizer_learning_rate,
-    set_seed,
-    split_train_val,
-    write_metadata,
-)
-from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
+from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
+
+
+# Helpers are embedded so this entry point can run as a standalone script.
+LABEL_ORDER = [
+    "CA",
+    "CA-CTCF",
+    "CA-H3K4me3",
+    "PLS",
+    "dELS",
+    "pELS",
+    "non_cCRE",
+]
+
+
+MARKER_ORDER = [
+    "ATAC",
+    "CTCF",
+    "H3K27ac",
+    "H3K27me3",
+    "H3K36me3",
+    "H3K4me1",
+    "H3K4me2",
+    "H3K4me3",
+    "H3K9ac",
+    "H3K9me3",
+]
+
+
+@dataclass
+class ColumnInfo:
+    column: str
+    assay: str
+    stage: str
+    tissue: str
+    marker: str
+    context: str
+    context_id: int
+    marker_id: int
+
+
+@dataclass
+class ContextInfo:
+    context_id: int
+    context: str
+    stage: str
+    tissue: str
+    observed_marker_count: int
+    observed_markers: str
+
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def parse_count_column(column: str) -> Optional[Tuple[str, str, str, str, str]]:
+    parts = column.split("-")
+    if len(parts) >= 3 and parts[0] == "ATAC":
+        assay = "ATAC"
+        stage = parts[1]
+        tissue = "-".join(parts[2:])
+        marker = "ATAC"
+        context = f"{stage}-{tissue}"
+        return assay, stage, tissue, marker, context
+    if len(parts) >= 5 and parts[0] == "CUT" and parts[1] == "Tag":
+        assay = "CUT-Tag"
+        stage = parts[2]
+        tissue = "-".join(parts[3:-1])
+        marker = parts[-1]
+        context = f"{stage}-{tissue}"
+        return assay, stage, tissue, marker, context
+    return None
+
+
+def build_context_mapping(
+    sample_cols: Sequence[str],
+    marker_order: Sequence[str],
+    include_context_regex: Optional[str],
+    min_observed_markers: int,
+) -> Tuple[List[str], List[ColumnInfo], List[ContextInfo], np.ndarray, np.ndarray, np.ndarray]:
+    marker_to_id = {marker: idx for idx, marker in enumerate(marker_order)}
+    parsed_rows = []
+    context_markers: Dict[str, set[str]] = collections.defaultdict(set)
+    context_stage_tissue: Dict[str, Tuple[str, str]] = {}
+    context_pattern = re.compile(include_context_regex) if include_context_regex else None
+
+    for column in sample_cols:
+        parsed = parse_count_column(column)
+        if parsed is None:
+            continue
+        assay, stage, tissue, marker, context = parsed
+        if marker not in marker_to_id:
+            continue
+        if context_pattern is not None and not context_pattern.search(context):
+            continue
+        parsed_rows.append((column, assay, stage, tissue, marker, context))
+        context_markers[context].add(marker)
+        context_stage_tissue[context] = (stage, tissue)
+
+    kept_contexts = [
+        context
+        for context, markers in context_markers.items()
+        if len(markers) >= min_observed_markers
+    ]
+    kept_contexts = sorted(
+        kept_contexts,
+        key=lambda context: (context_stage_tissue[context][0], context_stage_tissue[context][1]),
+    )
+    if not kept_contexts:
+        raise ValueError("No Organ-Stage contexts passed the marker and regex filters")
+
+    context_to_id = {context: idx for idx, context in enumerate(kept_contexts)}
+    column_infos: List[ColumnInfo] = []
+    selected_cols: List[str] = []
+    for column, assay, stage, tissue, marker, context in parsed_rows:
+        if context not in context_to_id:
+            continue
+        selected_cols.append(column)
+        column_infos.append(
+            ColumnInfo(
+                column=column,
+                assay=assay,
+                stage=stage,
+                tissue=tissue,
+                marker=marker,
+                context=context,
+                context_id=context_to_id[context],
+                marker_id=marker_to_id[marker],
+            )
+        )
+
+    n_contexts = len(kept_contexts)
+    n_markers = len(marker_order)
+    marker_mask = np.zeros((n_contexts, n_markers), dtype=np.float32)
+    context_marker_column_counts = np.zeros((n_contexts, n_markers), dtype=np.float32)
+    for info in column_infos:
+        marker_mask[info.context_id, info.marker_id] = 1.0
+        context_marker_column_counts[info.context_id, info.marker_id] += 1.0
+
+    contexts = []
+    for context in kept_contexts:
+        context_id = context_to_id[context]
+        stage, tissue = context_stage_tissue[context]
+        observed = [marker for marker in marker_order if marker_mask[context_id, marker_to_id[marker]]]
+        contexts.append(
+            ContextInfo(
+                context_id=context_id,
+                context=context,
+                stage=stage,
+                tissue=tissue,
+                observed_marker_count=len(observed),
+                observed_markers=",".join(observed),
+            )
+        )
+
+    context_ids_by_column = np.asarray([info.context_id for info in column_infos], dtype=np.int64)
+    marker_ids_by_column = np.asarray([info.marker_id for info in column_infos], dtype=np.int64)
+    flat_context_marker_ids = context_ids_by_column * n_markers + marker_ids_by_column
+
+    return (
+        selected_cols,
+        column_infos,
+        contexts,
+        marker_mask,
+        context_marker_column_counts,
+        flat_context_marker_ids,
+    )
+
+
+def load_count_matrix(
+    path: Path,
+    label_order: Sequence[str],
+    marker_order: Sequence[str],
+    include_context_regex: Optional[str],
+    min_observed_markers: int,
+) -> Tuple[
+    List[str],
+    np.ndarray,
+    np.ndarray,
+    List[str],
+    List[ColumnInfo],
+    List[ContextInfo],
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
+    print(f"Reading count matrix header: {path}", flush=True)
+    header = pd.read_csv(path, sep="\t", nrows=0).columns.tolist()
+    if len(header) < 3 or header[0] != "cCRE" or header[1] != "Gold":
+        raise ValueError("Count matrix must start with columns: cCRE, Gold")
+
+    (
+        selected_cols,
+        column_infos,
+        contexts,
+        marker_mask,
+        context_marker_column_counts,
+        flat_context_marker_ids,
+    ) = build_context_mapping(
+        header[2:],
+        marker_order,
+        include_context_regex,
+        min_observed_markers,
+    )
+    print(
+        f"Selected {len(selected_cols)} count columns, {len(contexts)} contexts, "
+        f"{len(marker_order)} markers.",
+        flush=True,
+    )
+
+    usecols = ["cCRE", "Gold", *selected_cols]
+    dtype = {col: np.float32 for col in selected_cols}
+    df = pd.read_csv(path, sep="\t", usecols=usecols, dtype=dtype)
+
+    unknown_labels = sorted(set(df["Gold"]) - set(label_order))
+    if unknown_labels:
+        raise ValueError(f"Unexpected labels in Gold column: {unknown_labels}")
+
+    label_to_id = {label: idx for idx, label in enumerate(label_order)}
+    region_ids = df["cCRE"].astype(str).tolist()
+    labels = df["Gold"].map(label_to_id).to_numpy(dtype=np.int64)
+    counts = df[selected_cols].to_numpy(dtype=np.float32, copy=True)
+    print(f"Loaded {counts.shape[0]} bags.", flush=True)
+    return (
+        region_ids,
+        labels,
+        counts,
+        selected_cols,
+        column_infos,
+        contexts,
+        marker_mask,
+        context_marker_column_counts,
+        flat_context_marker_ids,
+    )
+
+
+def write_metadata(
+    out_dir: Path,
+    label_order: Sequence[str],
+    marker_order: Sequence[str],
+    column_infos: Sequence[ColumnInfo],
+    contexts: Sequence[ContextInfo],
+    marker_mask: np.ndarray,
+) -> None:
+    pd.DataFrame([asdict(info) for info in column_infos]).to_csv(
+        out_dir / "column_to_context_marker.tsv", sep="\t", index=False
+    )
+    pd.DataFrame([asdict(info) for info in contexts]).to_csv(
+        out_dir / "contexts.tsv", sep="\t", index=False
+    )
+    mask_df = pd.DataFrame(marker_mask, columns=marker_order)
+    mask_df.insert(0, "context", [info.context for info in contexts])
+    mask_df.insert(0, "context_id", [info.context_id for info in contexts])
+    mask_df.to_csv(out_dir / "context_marker_mask.tsv", sep="\t", index=False)
+    with open(out_dir / "label_mapping.json", "w", encoding="utf-8") as handle:
+        json.dump({label: idx for idx, label in enumerate(label_order)}, handle, indent=2)
+    with open(out_dir / "marker_mapping.json", "w", encoding="utf-8") as handle:
+        json.dump({marker: idx for idx, marker in enumerate(marker_order)}, handle, indent=2)
+
+
+def fit_log_cpm_standardizer(
+    counts: np.ndarray,
+    train_indices: np.ndarray,
+    chunk_size: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n_columns = counts.shape[1]
+    library_sizes = np.zeros(n_columns, dtype=np.float64)
+    for start in range(0, len(train_indices), chunk_size):
+        idx = train_indices[start : start + chunk_size]
+        library_sizes += counts[idx].sum(axis=0, dtype=np.float64)
+    library_sizes[library_sizes <= 0.0] = 1.0
+
+    sums = np.zeros(n_columns, dtype=np.float64)
+    sumsq = np.zeros(n_columns, dtype=np.float64)
+    n_rows = 0
+    scale = 1_000_000.0 / library_sizes
+    for start in range(0, len(train_indices), chunk_size):
+        idx = train_indices[start : start + chunk_size]
+        x = np.log2(counts[idx].astype(np.float64) * scale + 1.0)
+        sums += x.sum(axis=0)
+        sumsq += np.square(x).sum(axis=0)
+        n_rows += x.shape[0]
+
+    mean = sums / max(n_rows, 1)
+    var = np.maximum(sumsq / max(n_rows, 1) - np.square(mean), 1e-12)
+    std = np.sqrt(var)
+    return library_sizes.astype(np.float32), mean.astype(np.float32), std.astype(np.float32)
+
+
+def make_class_weights(labels: np.ndarray, train_indices: np.ndarray, n_classes: int) -> torch.Tensor:
+    counts = np.bincount(labels[train_indices], minlength=n_classes).astype(np.float64)
+    weights = counts.sum() / np.maximum(counts, 1.0)
+    weights = weights / weights.mean()
+    return torch.tensor(weights, dtype=torch.float32)
+
+
+def scheduled_learning_rate(args: argparse.Namespace, epoch: int) -> float:
+    if args.lr_scheduler == "none":
+        return args.learning_rate
+    if args.min_learning_rate > args.learning_rate:
+        raise ValueError("--min-learning-rate must be <= --learning-rate")
+
+    if args.lr_scheduler == "cosine":
+        if args.epochs <= 1:
+            return args.min_learning_rate
+        progress = (epoch - 1) / (args.epochs - 1)
+        cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+        return args.min_learning_rate + (args.learning_rate - args.min_learning_rate) * cosine
+
+    if args.warmup_epochs <= 0:
+        raise ValueError("--warmup-epochs must be positive for warmup-cosine")
+    if args.warmup_epochs >= args.epochs:
+        raise ValueError("--warmup-epochs must be smaller than --epochs")
+    if epoch <= args.warmup_epochs:
+        return args.learning_rate * epoch / args.warmup_epochs
+
+    progress = (epoch - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
+    cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+    return args.min_learning_rate + (args.learning_rate - args.min_learning_rate) * cosine
+
+
+def set_optimizer_learning_rate(optimizer: torch.optim.Optimizer, learning_rate: float) -> None:
+    for group in optimizer.param_groups:
+        group["lr"] = learning_rate
+
+
+def metric_row(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
+        "macro_f1": f1_score(y_true, y_pred, average="macro"),
+    }
+
+
+def split_train_val(
+    train_outer: np.ndarray,
+    labels: np.ndarray,
+    val_fraction: float,
+    seed: int,
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    if val_fraction <= 0.0:
+        return train_outer, None
+    splitter = StratifiedShuffleSplit(
+        n_splits=1,
+        test_size=val_fraction,
+        random_state=seed,
+    )
+    train_pos, val_pos = next(splitter.split(train_outer, labels[train_outer]))
+    return train_outer[train_pos], train_outer[val_pos]
 
 
 class MissingAwareContextBagDataset(Dataset):

@@ -11,6 +11,9 @@ region_2     E130     ...
 Alternatively, provide --context-column if the table already contains full
 context names such as E130-Brain.  Missing timepoints are naturally absent from
 the table and will be masked out of attention.
+
+Standalone entry point: requires NumPy, pandas, PyTorch, and scikit-learn,
+but no other project Python modules.
 """
 
 from __future__ import annotations
@@ -22,13 +25,122 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 import pandas as pd
 import torch
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from run_context_attention_mil_cv import metric_row
-from run_missing_aware_context_attention_mil_cv_final import (
-    MissingAwareContextGatedAttentionMIL,
-    predict_missing_aware,
-)
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
+
+
+# Keep the embedded model and inference helpers in sync with MonkeyMIL_Train.py.
+def metric_row(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
+        "macro_f1": f1_score(y_true, y_pred, average="macro"),
+    }
+
+
+class MissingAwareContextGatedAttentionMIL(nn.Module):
+    def __init__(
+        self,
+        n_contexts: int,
+        n_markers: int,
+        n_classes: int,
+        context_embedding_dim: int,
+        hidden_dim: int,
+        attention_dim: int,
+        dropout: float,
+        instance_dropout: float,
+    ) -> None:
+        super().__init__()
+        self.n_contexts = n_contexts
+        self.n_markers = n_markers
+        self.instance_dropout = instance_dropout
+        self.context_embedding = nn.Embedding(n_contexts, context_embedding_dim)
+        self.instance_encoder = nn.Sequential(
+            nn.Linear(n_markers * 2 + context_embedding_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+        self.attention_v = nn.Linear(hidden_dim, attention_dim)
+        self.attention_u = nn.Linear(hidden_dim, attention_dim)
+        self.attention_w = nn.Linear(attention_dim, 1)
+        self.classifier = nn.Linear(hidden_dim, n_classes)
+        self.register_buffer("context_ids", torch.arange(n_contexts, dtype=torch.long))
+
+    def forward(
+        self,
+        signal: torch.Tensor,
+        observed_marker_mask: torch.Tensor,
+        context_present: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        batch_size = signal.shape[0]
+        context_emb = self.context_embedding(self.context_ids)
+        context_emb = context_emb.unsqueeze(0).expand(batch_size, -1, -1)
+        instance_input = torch.cat([signal, observed_marker_mask, context_emb], dim=-1)
+        h = self.instance_encoder(instance_input)
+
+        gated = torch.tanh(self.attention_v(h)) * torch.sigmoid(self.attention_u(h))
+        attention_logits = self.attention_w(gated).squeeze(-1)
+        context_present = context_present.bool()
+        attention_logits = attention_logits.masked_fill(
+            ~context_present,
+            torch.finfo(attention_logits.dtype).min,
+        )
+        if self.training and self.instance_dropout > 0.0:
+            keep = (torch.rand_like(attention_logits) > self.instance_dropout) & context_present
+            all_dropped = ~keep.any(dim=1, keepdim=True)
+            keep = keep | (all_dropped & context_present)
+            attention_logits = attention_logits.masked_fill(
+                ~keep,
+                torch.finfo(attention_logits.dtype).min,
+            )
+        attention = torch.softmax(attention_logits, dim=1)
+        bag_embedding = torch.sum(h * attention.unsqueeze(-1), dim=1)
+        logits = self.classifier(bag_embedding)
+        return logits, attention
+
+
+@torch.no_grad()
+def predict_missing_aware(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    amp: bool,
+    n_contexts: int,
+    collect_attention: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    model.eval()
+    row_parts: List[np.ndarray] = []
+    true_parts: List[np.ndarray] = []
+    prob_parts: List[np.ndarray] = []
+    attention_sum = np.zeros(n_contexts, dtype=np.float64) if collect_attention else None
+    attention_n = 0
+
+    for signal, observed_marker_mask, context_present, y, row_idx in loader:
+        signal = signal.to(device, non_blocking=True)
+        observed_marker_mask = observed_marker_mask.to(device, non_blocking=True)
+        context_present = context_present.to(device, non_blocking=True)
+        with torch.amp.autocast(device_type=device.type, enabled=amp):
+            logits, attention = model(signal, observed_marker_mask, context_present)
+            prob = torch.softmax(logits, dim=1)
+        row_parts.append(row_idx.numpy())
+        true_parts.append(y.numpy())
+        prob_parts.append(prob.cpu().numpy())
+        if collect_attention and attention_sum is not None:
+            attention_sum += attention.sum(dim=0).cpu().numpy()
+            attention_n += attention.shape[0]
+
+    rows = np.concatenate(row_parts)
+    y_true = np.concatenate(true_parts)
+    probs = np.concatenate(prob_parts)
+    mean_attention = None
+    if collect_attention and attention_sum is not None:
+        mean_attention = attention_sum / max(attention_n, 1)
+    return rows, y_true, probs, mean_attention
 
 
 class MissingAwareInferenceDataset(Dataset):
