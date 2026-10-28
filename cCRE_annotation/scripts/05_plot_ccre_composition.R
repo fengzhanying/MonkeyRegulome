@@ -3,16 +3,29 @@
 library(ggplot2)
 library(scales)
 
-workdir <- Sys.getenv("CCRE_WORKDIR")
-if (workdir == "") {
-  stop("Set CCRE_WORKDIR before running this script.")
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 1 && args[1] == "--help") {
+  cat("Usage: Rscript scripts/05_plot_ccre_composition.R <class_stats.txt> <output_dir>\n")
+  quit(status = 0)
 }
-
-stats_file <- file.path(workdir, "04.classification", "cCRE_class_stats.txt")
-out_dir <- file.path(workdir, "04.classification")
+if (length(args) == 2) {
+  stats_file <- args[1]
+  out_dir <- args[2]
+} else if (length(args) == 0 && Sys.getenv("CCRE_WORKDIR") != "") {
+  stats_file <- file.path(Sys.getenv("CCRE_WORKDIR"), "04.classification", "cCRE_class_stats.txt")
+  out_dir <- dirname(stats_file)
+} else {
+  stop("Supply class_stats.txt and output_dir, or set CCRE_WORKDIR. Use --help.")
+}
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 plot_df <- read.table(stats_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+if (ncol(plot_df) != 2) stop("Expected a two-column class-count table.")
 colnames(plot_df) <- c("Class", "Count")
+if (anyDuplicated(plot_df$Class) || any(!is.finite(plot_df$Count)) ||
+    any(plot_df$Count < 0) || any(plot_df$Count %% 1 != 0)) {
+  stop("Invalid class counts.")
+}
 
 class_name_map <- c(
   "PLS" = "Promoter",
@@ -23,9 +36,10 @@ class_name_map <- c(
   "CA" = "CA"
 )
 
+if (!all(plot_df$Class %in% names(class_name_map))) stop("Unknown cCRE class.")
 plot_df$Class <- class_name_map[plot_df$Class]
-plot_df <- plot_df[!is.na(plot_df$Class), ]
 total_ccre <- sum(plot_df$Count)
+if (total_ccre == 0) stop("The total class count must be positive.")
 plot_df$Percentage <- plot_df$Count / total_ccre
 
 write.csv(

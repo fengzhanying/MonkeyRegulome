@@ -1,0 +1,6 @@
+# Versions used for the recorded Windows core-demo validation.
+numpy==2.3.5
+pandas==3.0.1
+python-dateutil==3.0.0
+six==1.17.0
+tzdata==2026.5

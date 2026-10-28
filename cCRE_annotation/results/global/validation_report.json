@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "global_anchors": 702876,
+  "class_counts": {
+    "PLS": 8588,
+    "pELS": 31057,
+    "dELS": 418047,
+    "CA-H3K4me3": 15357,
+    "CA-CTCF": 51837,
+    "CA": 177990
+  },
+  "scope": "Internal consistency and classification from released z-scores/distances; not a raw-data rerun",
+  "optional_developmental_rows": 687576,
+  "global_ids_without_developmental_rows": 15300
+}

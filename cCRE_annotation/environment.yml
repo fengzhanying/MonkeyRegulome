@@ -1,0 +1,12 @@
+# Intended Linux production recipe; native tools have not been validated on this host.
+name: ccre
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12.14
+  - pip
+  - bedtools=2.31.1
+  - ucsc-bigwigaverageoverbed=482
+  - pip:
+      - -r requirements.txt

@@ -1,48 +1,30 @@
-# cCRE annotation upload checklist
+# Prepare the review/upload package
 
-Upload only the global cCRE annotation package to the MonkeyRegulome repository:
+From cCRE_annotation run:
+~~~bash
+python scripts/run_demo.py --outdir demo_output_review
+python -m unittest discover -s tests -v
+python scripts/verify_results.py
+python scripts/make_submission.py
+~~~
 
-```text
-cCRE_annotation/
-  README.md
-  config/
-    config.template.sh
-  scripts/
-    run_global_ccre.sh
-    00_prepare_masterlist.sh
-    01_generate_tss.py
-    02_extract_signals.sh
-    03_calculate_zscores.py
-    04_classify_ccres.py
-    05_plot_ccre_composition.R
-  results/
-    global/
-      README.md
-      Monkey_cCRE_Composition_Stats.csv
-      monkey_cCRE_developmental_annotation.tsv
-      monkey_cCREs.bed.gz
-      monkey_cCREs_annotated.txt.gz
-      cCRE_class_stats.txt
-  docs/
-    method_summary.md
-    upload_checklist.md
-```
+The archive contains source, versioned dependency instructions, demo data and
+expected outputs, regression tests, documentation, MIT license, and available
+global results. A SHA256SUMS.tsv inside the ZIP identifies every packaged file.
+The archive is generated under dist/ and should not be added to normal git history.
 
-Do not upload:
+For GitHub Desktop, review changes under cCRE_annotation, commit and push when
+ready. Do not commit .venv, demo_output*, __pycache__, personal config/config.sh,
+raw bigWigs or run intermediates. The provided .gitignore covers generated
+directories. The optional developmental table may be omitted from a future
+global-only release, but update the documentation/manifest consistently.
 
-- Raw ATAC-seq or CUT&Tag bigWig files.
-- Intermediate signal tables in `02.signals/`.
-- Intermediate z-score matrices in `03.zscores/`.
-- SLURM logs.
-- ENCODE reference PDFs.
-- Sample-specific, tissue-specific, or cross-species comparison scripts for
-  this first global-only release.
+The existing result files are left in their supplied uncompressed format.
+Do not silently replace them with a newly classified dataset after changing the
+distance mode. Report a new analysis version and compare labels by ID.
 
-Before pushing to GitHub:
-
-- Confirm that the coordinate assembly is stated consistently.
-- Confirm that `monkey_cCREs.bed.gz` and
-  `monkey_cCREs_annotated.txt.gz` are generated from the same run.
-- Add checksums for large result files.
-- Keep files larger than GitHub's limit out of the normal git history and
-  publish them through a release or data repository.
+Before submitting the Nature form, verify the remaining items in
+nature_checklist.md: actual native/cluster versions and execution, manuscript
+method alignment, original input access, reviewer access and independent
+colleague installation. Do not claim those steps have been completed solely
+because a form checkbox was previously selected.

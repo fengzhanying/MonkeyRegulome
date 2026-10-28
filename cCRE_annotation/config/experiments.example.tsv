@@ -1,0 +1,5 @@
+sample	mark	bigwig
+atac_01	ATAC	/path/to/atac.bw
+k4_01	H3K4me3	/path/to/h3k4me3.bw
+k27_01	H3K27ac	/path/to/h3k27ac.bw
+ctcf_01	CTCF	/path/to/ctcf.bw

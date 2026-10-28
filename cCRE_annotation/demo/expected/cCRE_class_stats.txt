@@ -1,0 +1,7 @@
+cCRE_class	count
+PLS	1
+pELS	1
+dELS	1
+CA-H3K4me3	1
+CA-CTCF	1
+CA	15

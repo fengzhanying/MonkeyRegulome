@@ -1,85 +1,59 @@
 #!/usr/bin/env python3
-"""Generate a non-redundant macaque TSS BED file from a GTF annotation."""
-
-from __future__ import annotations
-
+"""Generate deduplicated transcript TSS positions from a plain or gzipped GTF."""
+import gzip
 import os
 import re
-import sys
 from pathlib import Path
+import pandas as pd
+from common import cli, parser, read_anchors, record, write_tsv
 
-
-def require_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
-        sys.exit(f"ERROR: set {name} in the config file.")
-    return value
-
-
-def main() -> None:
-    workdir = Path(require_env("CCRE_WORKDIR"))
-    gtf = Path(require_env("CCRE_GTF"))
-    outdir = workdir / "01.masterlist"
-    rdhs = outdir / "monkey_rDHS.bed"
-    tss_out = outdir / "monkey_TSS.bed"
-
-    if not gtf.exists():
-        sys.exit(f"ERROR: GTF file not found: {gtf}")
-    if not rdhs.exists():
-        sys.exit(f"ERROR: rDHS BED file not found: {rdhs}")
-
-    with rdhs.open() as handle:
-        first_chrom = handle.readline().split("\t", 1)[0]
-    has_chr_prefix = first_chrom.startswith("chr")
-
-    tss_seen = set()
-    records = []
-
-    with gtf.open() as handle:
-        for line in handle:
-            if line.startswith("#"):
+def main():
+    p = parser(__doc__)
+    p.add_argument("--gtf", type=Path, default=os.environ.get("CCRE_GTF"),
+                   required=not os.environ.get("CCRE_GTF"))
+    args = p.parse_args()
+    anchors_path = args.workdir / "01.masterlist/monkey_rDHS.bed"
+    anchors = read_anchors(anchors_path)
+    has_prefix = anchors.chr.iloc[0].startswith("chr")
+    rows, seen = [], set()
+    opener = gzip.open if args.gtf.suffix == ".gz" else open
+    with opener(args.gtf, "rt", encoding="utf-8") as stream:
+        for n, line in enumerate(stream, 1):
+            if not line.strip() or line.startswith("#"):
                 continue
             fields = line.rstrip("\n").split("\t")
-            if len(fields) < 9 or fields[2] != "transcript":
+            if len(fields) != 9:
+                raise ValueError(f"GTF line {n}: expected nine fields")
+            if fields[2] != "transcript":
                 continue
-
-            chrom = fields[0]
-            strand = fields[6]
-            attr = fields[8]
-
-            if has_chr_prefix and not chrom.startswith("chr"):
+            chrom, strand = fields[0], fields[6]
+            if strand not in {"+", "-"}:
+                raise ValueError(f"GTF line {n}: invalid transcript strand")
+            if has_prefix and not chrom.startswith("chr"):
                 chrom = "chr" + chrom
-            elif not has_chr_prefix and chrom.startswith("chr"):
+            elif not has_prefix and chrom.startswith("chr"):
                 chrom = chrom[3:]
-
             if "_" in chrom or chrom in {"chrM", "chrMT", "M", "MT", "chrEBV"}:
                 continue
-
-            match = re.search(r'gene_name "([^"]+)"', attr)
-            gene_name = match.group(1) if match else None
-            if not gene_name:
-                match = re.search(r'gene_id "([^"]+)"', attr)
-                gene_name = match.group(1) if match else "NA"
-
-            start_gtf = int(fields[3])
-            end_gtf = int(fields[4])
-            tss_start = start_gtf - 1 if strand == "+" else end_gtf - 1
-            tss_end = tss_start + 1
-
-            key = (chrom, tss_start, strand)
-            if key in tss_seen:
-                continue
-            tss_seen.add(key)
-            records.append((chrom, tss_start, tss_end, gene_name, 0, strand))
-
-    records.sort(key=lambda record: (record[0], record[1]))
-    with tss_out.open("w", newline="\n") as out:
-        for record in records:
-            out.write("\t".join(map(str, record)) + "\n")
-
-    print(f"Total unique TSS positions: {len(records)}")
-    print(f"Output: {tss_out}")
-
+            start, end = int(fields[3]), int(fields[4])
+            if start < 1 or end < start:
+                raise ValueError(f"GTF line {n}: invalid coordinates")
+            match = re.search(r'gene_name "([^"]+)"', fields[8])
+            if not match:
+                match = re.search(r'gene_id "([^"]+)"', fields[8])
+            gene = match.group(1) if match else "NA"
+            pos = (start if strand == "+" else end) - 1
+            key = chrom, pos, strand
+            if key not in seen:
+                seen.add(key)
+                rows.append((chrom, pos, pos + 1, gene, 0, strand))
+    if not rows or not set(anchors.chr).intersection(r[0] for r in rows):
+        raise ValueError("No TSS on any anchor chromosome; check assembly/naming")
+    rows.sort(key=lambda row: (row[0], row[1]))
+    target = args.workdir / "01.masterlist/monkey_TSS.bed"
+    write_tsv(pd.DataFrame(rows), target, header=False)
+    record(args.workdir, "01_tss", [args.gtf, anchors_path], [target])
+    print(f"Wrote {len(rows)} unique TSS positions: {target}")
 
 if __name__ == "__main__":
-    main()
+    cli(main)

@@ -1,159 +1,110 @@
 #!/usr/bin/env python3
-"""Classify macaque accessible anchors into global cCRE categories."""
-
-from __future__ import annotations
-
+"""Classify global accessible anchors, with explicit historical distance compatibility."""
 import os
 import subprocess
-import sys
 from pathlib import Path
-
+import numpy as np
 import pandas as pd
-
+from common import CLASSES, MARKS, atomic_path, cli, parser, read_anchors, record, write_tsv
 
 Z_THRESH = 1.64
 TSS_CORE_BP = 200
 TSS_PROX_BP = 2000
 
+def classify(row):
+    k4 = row["z_h3k4me3"] > Z_THRESH
+    k27 = row["z_h3k27ac"] > Z_THRESH
+    ctcf = row["z_ctcf"] > Z_THRESH
+    if row["tss_core"] and k4:
+        return "PLS"
+    if row["tss_proximal"] and k27:
+        return "pELS"
+    if k27:
+        return "dELS"
+    if k4:
+        return "CA-H3K4me3"
+    if ctcf:
+        return "CA-CTCF"
+    return "CA"
 
-def require_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
-        sys.exit(f"ERROR: set {name} in the config file.")
-    return value
-
-
-def main() -> None:
-    workdir = Path(require_env("CCRE_WORKDIR"))
-    outdir = workdir / "04.classification"
-    outdir.mkdir(parents=True, exist_ok=True)
-
-    rdhs_bed = workdir / "01.masterlist" / "monkey_rDHS.bed"
-    tss_bed = workdir / "01.masterlist" / "monkey_TSS.bed"
-    near_tss = workdir / "01.masterlist" / "monkey_rDHS_nearTSS.bed"
-    zsdir = workdir / "03.zscores"
-
-    if not rdhs_bed.exists():
-        sys.exit(f"ERROR: rDHS BED file not found: {rdhs_bed}")
-    if not tss_bed.exists():
-        sys.exit(f"ERROR: TSS BED file not found: {tss_bed}")
-
-    if not near_tss.exists():
-        print("Computing distance from each anchor to the nearest TSS...")
-        with near_tss.open("w", newline="\n") as out:
-            ret = subprocess.run(
-                [
-                    "bedtools",
-                    "closest",
-                    "-a",
-                    str(rdhs_bed),
-                    "-b",
-                    str(tss_bed),
-                    "-D",
-                    "ref",
-                    "-t",
-                    "first",
-                ],
-                stdout=out,
-                check=False,
-            )
-        if ret.returncode != 0:
-            sys.exit(
-                "ERROR: bedtools closest failed. Check genome assembly and "
-                "chromosome naming consistency."
-            )
-    else:
-        print(f"Reusing existing nearest-TSS file: {near_tss}")
-
-    near = pd.read_csv(
-        near_tss,
-        sep="\t",
-        header=None,
-        names=[
-            "chr",
-            "start",
-            "end",
-            "id",
-            "tss_chr",
-            "tss_start",
-            "tss_end",
-            "gene",
-            "score",
-            "strand",
-            "dist",
-        ],
-    )
-
+def parse_nearest(path, anchors, mode):
+    near = pd.read_csv(path, sep="\t", header=None, keep_default_na=False)
+    if near.shape[1] != 11:
+        raise ValueError("Nearest-TSS input must be BED4 + BED6 + signed distance (11 columns)")
+    near.columns = ["chr", "start", "end", "id", "tss_chr", "tss_start",
+                    "tss_end", "gene", "score", "strand", "dist"]
+    if near.id.duplicated().any() or set(near.id) != set(anchors.id):
+        raise ValueError("Nearest-TSS records must match anchor IDs exactly, one per anchor")
+    near = near.set_index("id").loc[anchors.id].reset_index()
     for col in ["start", "end", "tss_start", "tss_end", "dist"]:
-        near[col] = pd.to_numeric(near[col], errors="coerce")
+        near[col] = pd.to_numeric(near[col], errors="raise")
+        if not np.isfinite(near[col]).all() or (near[col] % 1 != 0).any():
+            raise ValueError("Nearest-TSS coordinates/distances must be finite integers")
+    if not near[["chr", "start", "end", "id"]].equals(anchors.reset_index(drop=True)):
+        raise ValueError("Nearest-TSS coordinates disagree with anchor BED")
+    missing = near.tss_chr.isin(["none", "."]) | (near.tss_start < 0) | (near.tss_end < 0)
+    valid = ~missing
+    if (near.loc[valid, "tss_chr"] != near.loc[valid, "chr"]).any() or (
+        near.loc[valid, "tss_end"] - near.loc[valid, "tss_start"] != 1
+    ).any():
+        raise ValueError("Nearest TSS must be a one-base interval on the anchor chromosome")
+    if mode == "legacy":
+        # Deliberate historical compatibility: an upstream distance of -1 was
+        # treated as missing. Corrected mode uses only the missing-B fields.
+        missing = missing | (near.dist == -1)
+    near["center_dist"] = abs((near.start + near.end - near.tss_start - near.tss_end) / 2)
+    near.loc[missing, "center_dist"] = 1e12
+    return near
 
-    no_tss = near["tss_start"].isna() | near["tss_end"].isna() | (near["dist"] == -1)
-    anchor_center = (near["start"] + near["end"]) / 2.0
-    tss_center = (near["tss_start"] + near["tss_end"]) / 2.0
-    near["center_dist"] = (anchor_center - tss_center).abs()
-    near.loc[no_tss, "center_dist"] = float(1e12)
-
-    near = near.sort_values("center_dist").drop_duplicates("id", keep="first")
-    rdhs = near[["chr", "start", "end", "id", "center_dist", "gene"]].copy()
-    rdhs["tss_core"] = rdhs["center_dist"] <= TSS_CORE_BP
-    rdhs["tss_proximal"] = rdhs["center_dist"] <= TSS_PROX_BP
-    rdhs = rdhs.set_index("id")
-
-    def load_max_z(mark: str) -> pd.Series:
-        path = zsdir / f"{mark}_max_zscore.txt"
-        if not path.exists():
-            print(f"  [WARN] Missing Z-score file for {mark}; defaulting to 0.")
-            return pd.Series(0.0, index=rdhs.index, name=f"z_{mark.lower()}")
-        df = pd.read_csv(path, sep="\t").set_index("name")
-        return df["max_zscore"].rename(f"z_{mark.lower()}")
-
-    print("Loading max Z-scores...")
-    rdhs["z_atac"] = load_max_z("ATAC")
-    rdhs["z_h3k4me3"] = load_max_z("H3K4me3")
-    rdhs["z_h3k27ac"] = load_max_z("H3K27ac")
-    rdhs["z_ctcf"] = load_max_z("CTCF")
-    rdhs = rdhs.fillna(0)
-
-    def classify(row: pd.Series) -> str:
-        k4me3 = row["z_h3k4me3"] > Z_THRESH
-        k27ac = row["z_h3k27ac"] > Z_THRESH
-        ctcf = row["z_ctcf"] > Z_THRESH
-        core = bool(row["tss_core"])
-        prox = bool(row["tss_proximal"])
-
-        if core and k4me3:
-            return "PLS"
-        if prox and k27ac:
-            return "pELS"
-        if (not prox) and k27ac:
-            return "dELS"
-        if k4me3:
-            return "CA-H3K4me3"
-        if ctcf:
-            return "CA-CTCF"
-        return "CA"
-
-    print("Classifying cCREs...")
-    rdhs["cCRE_class"] = rdhs.apply(classify, axis=1)
-    rdhs_out = rdhs.reset_index()
-
-    annotated_out = outdir / "monkey_cCREs_annotated.txt"
-    bed_out = outdir / "monkey_cCREs.bed"
-    stats_out = outdir / "cCRE_class_stats.txt"
-
-    rdhs_out.to_csv(annotated_out, sep="\t", index=False)
-    rdhs_out[["chr", "start", "end", "id", "cCRE_class"]].to_csv(
-        bed_out, sep="\t", header=False, index=False
-    )
-    rdhs_out["cCRE_class"].value_counts().to_csv(
-        stats_out, sep="\t", header=["count"]
-    )
-
-    print("\n=== cCRE classification summary ===")
-    print(rdhs_out["cCRE_class"].value_counts().to_string())
-    print(f"\nTotal ATAC anchors retained: {len(rdhs_out)}")
-    print(f"Output BED: {bed_out}")
-
+def main():
+    p = parser(__doc__)
+    p.add_argument("--distance-mode", choices=["legacy", "corrected"],
+                   default=os.environ.get("CCRE_DISTANCE_MODE", "legacy"))
+    p.add_argument("--nearest-tss", type=Path,
+                   help="Explicit precomputed bedtools result (used by the core demo)")
+    args = p.parse_args()
+    rdhs_path = args.workdir / "01.masterlist/monkey_rDHS.bed"
+    tss_path = args.workdir / "01.masterlist/monkey_TSS.bed"
+    anchors = read_anchors(rdhs_path)
+    near_path = args.nearest_tss or args.workdir / "01.masterlist/monkey_rDHS_nearTSS.bed"
+    external = "precomputed; bedtools not invoked"
+    if args.nearest_tss is None:
+        external = subprocess.check_output(["bedtools", "--version"], text=True).strip()
+        with atomic_path(near_path) as temporary, temporary.open("w", encoding="utf-8", newline="\n") as stream:
+            subprocess.run(["bedtools", "closest", "-a", str(rdhs_path), "-b", str(tss_path),
+                            "-D", "ref", "-t", "first"], stdout=stream, check=True)
+    near = parse_nearest(near_path, anchors, args.distance_mode)
+    frame = near[["chr", "start", "end", "id", "center_dist", "gene"]].copy()
+    frame["tss_core"] = frame.center_dist <= TSS_CORE_BP
+    frame["tss_proximal"] = frame.center_dist <= TSS_PROX_BP
+    inputs = [rdhs_path, tss_path, near_path]
+    for mark in MARKS:
+        path = args.workdir / "03.zscores" / f"{mark}_max_zscore.txt"
+        scores = pd.read_csv(path, sep="\t")
+        if list(scores.columns) != ["name", "max_zscore"] or scores.name.duplicated().any() or set(scores.name) != set(anchors.id):
+            raise ValueError(f"{path}: expected one maximum z-score per anchor")
+        scores = scores.set_index("name").loc[anchors.id, "max_zscore"]
+        if not np.isfinite(scores).all():
+            raise ValueError(f"{path}: non-finite maximum z-scores")
+        frame["z_" + mark.lower()] = scores.to_numpy()
+        inputs.append(path)
+    frame["cCRE_class"] = frame.apply(classify, axis=1)
+    # Sorted coordinates simplify browser and interval-tool reuse; labels are unchanged.
+    frame = frame.sort_values(["chr", "start", "end"], kind="stable")
+    frame = frame[["id"] + [c for c in frame.columns if c != "id"]]
+    out = args.workdir / "04.classification"
+    annotated, bed, stats = (out / name for name in
+        ["monkey_cCREs_annotated.txt", "monkey_cCREs.bed", "cCRE_class_stats.txt"])
+    write_tsv(frame, annotated)
+    write_tsv(frame[["chr", "start", "end", "id", "cCRE_class"]], bed, header=False)
+    counts = frame.cCRE_class.value_counts().reindex(CLASSES, fill_value=0)
+    write_tsv(counts.rename_axis("cCRE_class").reset_index(name="count"), stats)
+    record(args.workdir, "04_classification", inputs, [annotated, bed, stats],
+           {"distance_mode": args.distance_mode, "threshold_strict_gt": Z_THRESH,
+            "core_bp_inclusive": TSS_CORE_BP, "proximal_bp_inclusive": TSS_PROX_BP,
+            "bedtools": external, "ATAC_filter": False})
+    print(counts.to_string())
+    print(f"Total: {len(frame)}; distance mode: {args.distance_mode}")
 
 if __name__ == "__main__":
-    main()
+    cli(main)

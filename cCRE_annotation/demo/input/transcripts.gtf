@@ -1,0 +1,3 @@
+1	synthetic	transcript	1001	1100	.	+	.	gene_id "demo_plus"; gene_name "DEMO_PLUS";
+1	synthetic	transcript	1001	1200	.	+	.	gene_id "demo_duplicate"; gene_name "DUPLICATE";
+1	synthetic	transcript	900	1001	.	-	.	gene_id "demo_minus"; gene_name "DEMO_MINUS";
