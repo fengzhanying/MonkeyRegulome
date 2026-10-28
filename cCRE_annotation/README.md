@@ -165,6 +165,17 @@ See [method_summary.md](docs/method_summary.md) for precise rules and pseudocode
 [code_summary.md](docs/code_summary.md) for script responsibilities, and
 [results/global/README.md](results/global/README.md) for formats and provenance.
 
+Files in `results/global/` include:
+
+- `monkey_cCREs.bed`: global macaque cCRE coordinates and class labels.
+- `monkey_cCREs_annotated.txt`: global macaque cCRE coordinates, nearest
+  gene/TSS information, mark z-scores, and class labels.
+- `cCRE_class_stats.txt`: class counts.
+- `Monkey_cCRE_Composition_Stats.csv`: class counts and percentages using
+  readable class names.
+- `monkey_cCRE_developmental_annotation.tsv`: sample, tissue, and time-point
+  support summary for global cCRE anchors.
+
 The default distance mode is legacy for compatibility with the archived
 classification. It preserves an upstream signed-distance -1 handling defect.
 The optional corrected mode fixes that missing-TSS test; it can change labels.
